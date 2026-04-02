@@ -1,0 +1,88 @@
+PrismaClientValidationError: 
+Invalid `tx.payment.create()` invocation in
+D:\RP\decoration-rental\.next\dev\server\chunks\[root-of-the-server]__0jvn8~6._.js:300:30
+
+  297 });
+  298 const updatedBooking = await __TURBOPACK__imported__module__$5b$project$5d2f$decoration$2d$rental$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].$transaction(async (tx)=>{
+  299     // Create payment record for the remainder
+→ 300     await tx.payment.create({
+            data: {
+              bookingId: "3772637e-cb81-4195-925f-c15e0a5d08e0",
+              amount: 24,
+              method: "LOCAL_EVC",
+                      ~~~~~~~~~~~
+              transactionId: "ADMIN-TXN-1775112644502",
+              status: "SUCCESS",
+              paidAt: new Date("2026-04-02T06:50:44.502Z")
+            }
+          })
+
+Invalid value for argument `method`. Expected PaymentMethod.
+
+Invalid `tx.payment.create()` invocation in
+D:\RP\decoration-rental\.next\dev\server\chunks\[root-of-the-server]__0jvn8~6._.js:300:30
+
+  297 });
+  298 const updatedBooking = await __TURBOPACK__imported__module__$5b$project$5d2f$decoration$2d$rental$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].$transaction(async (tx)=>{
+  299     // Create payment record for the remainder
+→ 300     await tx.payment.create({
+            data: {
+              bookingId: "3772637e-cb81-4195-925f-c15e0a5d08e0",
+              amount: 24,
+              method: "LOCAL_EVC",
+                      ~~~~~~~~~~~
+              transactionId: "ADMIN-TXN-1775112644502",
+              status: "SUCCESS",
+              paidAt: new Date("2026-04-02T06:50:44.502Z")
+            }
+          })
+
+Invalid value for argument `method`. Expected PaymentMethod.
+PrismaClientValidationError: 
+Invalid `tx.payment.create()` invocation in
+D:\RP\decoration-rental\.next\dev\server\chunks\[root-of-the-server]__0jvn8~6._.js:300:30
+
+  297 });
+  298 const updatedBooking = await __TURBOPACK__imported__module__$5b$project$5d2f$decoration$2d$rental$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].$transaction(async (tx)=>{
+  299     // Create payment record for the remainder
+→ 300     await tx.payment.create({
+            data: {
+              bookingId: "3772637e-cb81-4195-925f-c15e0a5d08e0",
+              amount: 24,
+              method: "LOCAL_EVC",
+                      ~~~~~~~~~~~
+              transactionId: "ADMIN-TXN-1775112644502",
+              status: "SUCCESS",
+              paidAt: new Date("2026-04-02T06:50:44.502Z")
+            }
+          })
+
+Invalid value for argument `method`. Expected PaymentMethod.
+    at ar (D:\RP\decoration-rental\node_modules\.pnpm\@prisma+client@7.5.0_prisma_91089ffd60048d4eaa65cb128d7b1531\node_modules\@prisma\client\runtime\client.js:10:1374)
+    at Gr.handleRequestError (D:\RP\decoration-rental\node_modules\.pnpm\@prisma+client@7.5.0_prisma_91089ffd60048d4eaa65cb128d7b1531\node_modules\@prisma\client\runtime\client.js:65:7929)
+    at Gr.handleAndLogRequestError (D:\RP\decoration-rental\node_modules\.pnpm\@prisma+client@7.5.0_prisma_91089ffd60048d4eaa65cb128d7b1531\node_modules\@prisma\client\runtime\client.js:65:7581)
+    at Gr.request (D:\RP\decoration-rental\node_modules\.pnpm\@prisma+client@7.5.0_prisma_91089ffd60048d4eaa65cb128d7b1531\node_modules\@prisma\client\runtime\client.js:65:7288)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async a (D:\RP\decoration-rental\node_modules\.pnpm\@prisma+client@7.5.0_prisma_91089ffd60048d4eaa65cb128d7b1531\node_modules\@prisma\client\runtime\client.js:75:6730)
+    at async D:\RP\decoration-rental\.next\dev\server\chunks\[root-of-the-server]__0jvn8~6._.js:300:13
+    at async Proxy._transactionWithCallback (D:\RP\decoration-rental\node_modules\.pnpm\@prisma+client@7.5.0_prisma_91089ffd60048d4eaa65cb128d7b1531\node_modules\@prisma\client\runtime\client.js:75:4668)
+    at async POST (D:\RP\decoration-rental\.next\dev\server\chunks\[root-of-the-server]__0jvn8~6._.js:298:32)
+    at async AppRouteRouteModule.do (D:\RP\decoration-rental\node_modules\.pnpm\next@16.2.1_@babel+core@7.2_362c6897e98f78157a7f59905ed20b55\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:40732)
+    at async AppRouteRouteModule.handle (D:\RP\decoration-rental\node_modules\.pnpm\next@16.2.1_@babel+core@7.2_362c6897e98f78157a7f59905ed20b55\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:47861)
+    at async responseGenerator (D:\RP\decoration-rental\.next\dev\server\chunks\0o7j_next_03zqspb._.js:18295:38)
+    at async AppRouteRouteModule.handleResponse (D:\RP\decoration-rental\node_modules\.pnpm\next@16.2.1_@babel+core@7.2_362c6897e98f78157a7f59905ed20b55\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:227216)
+    at async handleResponse (D:\RP\decoration-rental\.next\dev\server\chunks\0o7j_next_03zqspb._.js:18358:32)
+    at async Module.handler (D:\RP\decoration-rental\.next\dev\server\chunks\0o7j_next_03zqspb._.js:18412:13)
+    at async DevServer.renderToResponseWithComponentsImpl (D:\RP\decoration-rental\node_modules\.pnpm\next@16.2.1_@babel+core@7.2_362c6897e98f78157a7f59905ed20b55\node_modules\next\dist\server\base-server.js:1454:9)
+    at async DevServer.renderPageComponent (D:\RP\decoration-rental\node_modules\.pnpm\next@16.2.1_@babel+core@7.2_362c6897e98f78157a7f59905ed20b55\node_modules\next\dist\server\base-server.js:1506:24)
+    at async DevServer.renderToResponseImpl (D:\RP\decoration-rental\node_modules\.pnpm\next@16.2.1_@babel+core@7.2_362c6897e98f78157a7f59905ed20b55\node_modules\next\dist\server\base-server.js:1556:32)
+    at async DevServer.pipeImpl (D:\RP\decoration-rental\node_modules\.pnpm\next@16.2.1_@babel+core@7.2_362c6897e98f78157a7f59905ed20b55\node_modules\next\dist\server\base-server.js:1043:25)
+    at async NextNodeServer.handleCatchallRenderRequest (D:\RP\decoration-rental\node_modules\.pnpm\next@16.2.1_@babel+core@7.2_362c6897e98f78157a7f59905ed20b55\node_modules\next\dist\server\next-server.js:338:17)
+    at async DevServer.handleRequestImpl (D:\RP\decoration-rental\node_modules\.pnpm\next@16.2.1_@babel+core@7.2_362c6897e98f78157a7f59905ed20b55\node_modules\next\dist\server\base-server.js:934:17)
+    at async D:\RP\decoration-rental\node_modules\.pnpm\next@16.2.1_@babel+core@7.2_362c6897e98f78157a7f59905ed20b55\node_modules\next\dist\server\dev\next-dev-server.js:394:20
+    at async Span.traceAsyncFn (D:\RP\decoration-rental\node_modules\.pnpm\next@16.2.1_@babel+core@7.2_362c6897e98f78157a7f59905ed20b55\node_modules\next\dist\trace\trace.js:164:20)
+    at async DevServer.handleRequest (D:\RP\decoration-rental\node_modules\.pnpm\next@16.2.1_@babel+core@7.2_362c6897e98f78157a7f59905ed20b55\node_modules\next\dist\server\dev\next-dev-server.js:390:24)
+    at async invokeRender (D:\RP\decoration-rental\node_modules\.pnpm\next@16.2.1_@babel+core@7.2_362c6897e98f78157a7f59905ed20b55\node_modules\next\dist\server\lib\router-server.js:253:21)
+    at async handleRequest (D:\RP\decoration-rental\node_modules\.pnpm\next@16.2.1_@babel+core@7.2_362c6897e98f78157a7f59905ed20b55\node_modules\next\dist\server\lib\router-server.js:452:24)
+    at async requestHandlerImpl (D:\RP\decoration-rental\node_modules\.pnpm\next@16.2.1_@babel+core@7.2_362c6897e98f78157a7f59905ed20b55\node_modules\next\dist\server\lib\router-server.js:501:13)
+    at async Server.requestListener (D:\RP\decoration-rental\node_modules\.pnpm\next@16.2.1_@babel+core@7.2_362c6897e98f78157a7f59905ed20b55\node_modules\next\dist\server\lib\start-server.js:225:13)
