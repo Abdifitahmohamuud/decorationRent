@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       to: email,
       subject: template.subject,
       message: template.message,
-      html: template.html,
+      html: template.html,    
     });
 
     if (!emailRes.success) {
@@ -41,4 +41,6 @@ export async function POST(req: Request) {
     console.error("OTP Send Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  
 }
