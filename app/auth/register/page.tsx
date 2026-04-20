@@ -18,7 +18,7 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({ fullName: "", email: "", phone: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
   // OTP States
   const [showOtp, setShowOtp] = useState(false);
   const [otp, setOtp] = useState("");
@@ -69,7 +69,7 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isVerified) return setError("Please verify your email first");
-    
+
     setLoading(true);
     setError("");
 
@@ -98,13 +98,13 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-gray-50/50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-10 px-8 shadow-2xl rounded-[2.5rem] border border-gray-100 space-y-8">
-          
+
           <div className="text-center space-y-2">
-             <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-indigo-600 text-white shadow-xl shadow-indigo-100 mb-4 transform hover:scale-110 transition-transform duration-300">
-                <ShieldCheck className="w-8 h-8" />
-             </div>
-             <h2 className="text-3xl font-black text-gray-900 tracking-tight">Join the Elite</h2>
-             <p className="text-gray-400 font-medium text-sm">Create your premium decoration account</p>
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-indigo-600 text-white shadow-xl shadow-indigo-100 mb-4 transform hover:scale-110 transition-transform duration-300">
+              <ShieldCheck className="w-8 h-8" />
+            </div>
+            <h2 className="text-3xl font-black text-gray-900 tracking-tight">Join the Elite</h2>
+            <p className="text-gray-400 font-medium text-sm">Create your premium decoration account</p>
           </div>
 
           <form className="space-y-5" onSubmit={handleSubmit}>
@@ -167,8 +167,8 @@ export default function RegisterPage() {
                     className="bg-transparent border-none focus:ring-0 text-center font-black text-indigo-600 tracking-[0.5em] w-2/3 text-lg"
                     value={otp}
                     onChange={(e) => {
-                       setOtp(e.target.value);
-                       if (e.target.value.length === 5) verifyOtp();
+                      setOtp(e.target.value);
+                      if (e.target.value.length === 5) verifyOtp();
                     }}
                   />
                   {isVerifying && <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />}
