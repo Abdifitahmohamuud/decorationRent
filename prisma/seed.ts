@@ -67,18 +67,8 @@ async function main() {
     },
   ];
 
-  for (const dec of decorations) {
-    await prisma.decoration.upsert({
-      where: { id: dec.name.toLowerCase().replace(/\s+/g, "-") }, // Not a uuid but for seed it's fine if we use name as ID or similar. Wait, ID is String @id @default(uuid()).
-      // Actually, upsert needs a unique field. ID is unique.
-      // I'll just use create for seed if I don't want to manage IDs.
-      update: dec,
-      create: {
-        ...dec,
-        id: undefined, // Let prisma generate it
-      },
-    });
-  }
+  
+   
 }
 
 main()
