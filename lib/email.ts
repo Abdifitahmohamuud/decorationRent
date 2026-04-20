@@ -111,4 +111,13 @@ export const emailTemplates = {
       `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard`
     )
   }),
+  otp: (code: string) => ({
+    subject: "Your Verification Code",
+    message: `Your verification code is: ${code}. It will expire in 10 minutes.`,
+    html: generateEmailHtml(
+       "Email Verification",
+       `Your verification code is: <span style="font-size: 32px; letter-spacing: 5px; color: #6366f1; font-weight: 900; display: block; margin: 20px 0;">${code}</span>\n\nThis code will expire in <span class="highlight">10 minutes</span>. If you did not request this, please ignore this email.`
+    )
+  }),
 };
+

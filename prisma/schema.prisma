@@ -148,3 +148,14 @@ enum NotificationType {
   PAYMENT
   REMINDER
 }
+
+model Otp {
+  id        String   @id @default(uuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email, code])
+}
+

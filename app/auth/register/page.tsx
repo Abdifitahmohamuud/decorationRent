@@ -55,7 +55,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/otp/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ otp }),
+        body: JSON.stringify({ email: formData.email, otp }),
       });
       if (!res.ok) throw new Error("Invalid or expired code");
       setIsVerified(true);
