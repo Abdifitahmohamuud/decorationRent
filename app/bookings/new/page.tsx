@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-hot-toast";
@@ -13,7 +13,7 @@ interface Decoration {
   availableQty: number;
 }
 
-export default function NewBookingPage() {
+function BookingForm() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -205,5 +205,18 @@ export default function NewBookingPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function NewBookingPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center p-20 space-y-4">
+        <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
+        <p className="text-gray-500 font-medium">Loading...</p>
+      </div>
+    }>
+      <BookingForm />
+    </Suspense>
   );
 }
