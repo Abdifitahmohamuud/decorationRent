@@ -75,7 +75,7 @@ export async function POST(req: Request) {
     const eventDateObj = new Date(eventDate);
     const endDateObj = new Date(endDate);
 
-    const booking = await prisma.$transaction(async (tx) => {
+    const booking = await prisma.$transaction(async (tx : any) => {
       let totalPrice = 0;
       const bookingItemsData = [];
 

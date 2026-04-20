@@ -1,4 +1,4 @@
-import { cookies } from "next-auth/headers"; // Wait, next/headers
+
 import { NextResponse } from "next/server";
 
 export async function POST() {
