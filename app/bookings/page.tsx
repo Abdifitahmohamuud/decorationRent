@@ -168,7 +168,7 @@ function BookingCard({ booking }: { booking: Booking }) {
 }
 
 export default function MyBookingsPage() {
-  const { user, isLoading } = useAuth();
+  const { user, loading: isLoading } = useAuth();
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);

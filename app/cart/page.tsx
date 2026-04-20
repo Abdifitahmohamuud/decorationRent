@@ -12,7 +12,7 @@ type PaymentMethod = "LOCAL_EVC" | "LOCAL_EDAHAB" | "LOCAL_SAHAL" | "LOCAL_PREMI
 
 export default function CartPage() {
   const { cartItems, updateQuantity, removeFromCart, clearCart } = useCart();
-  const { user, isLoading } = useAuth();
+  const { user, loading: isLoading } = useAuth();
   const router = useRouter();
 
   const [bookingData, setBookingData] = useState({
