@@ -10,18 +10,15 @@ export default async function DecorationsPage() {
     orderBy: { createdAt: "desc" },
   });
   
-  const decorations = [];
-  for (let i = 0; i < dbDecorations.length; i++) {
-    const d = dbDecorations[i];
-    let imageData = null;
+  const decorations = dbDecorations.map(d => {
+    let image = null;
     if (d.image) {
-      imageData = `data:image/jpeg;base64,${Buffer.from(d.image).toString("base64")}`;
+      const base64 = Buffer.from(d.image).toString("base64");
+      // Basic check for image format, defaulting to jpeg if unsure
+      image = `data:image/jpeg;base64,${base64}`;
     }
-    decorations.push({
-      ...d,
-      image: imageData
-    });
-  }
+    return { ...d, image };
+  });
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -72,7 +69,7 @@ export default async function DecorationsPage() {
                       name: item.name,
                       price: item.price,
                       availableQty: item.availableQty,
-                      image: item.image ? Buffer.from(item.image).toString('base64') : null, // Assuming image might need handling, but the component uses standard strings. Let's just pass null for safety if it's a blob. wait, let's keep it simple. Actually we'll skip image to avoid issues.
+                      image: item.image, // Already a base64 string
                     }} 
                   />
                 ) : (

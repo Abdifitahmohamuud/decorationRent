@@ -25,19 +25,16 @@ export async function GET(req: Request) {
     });
 
     // Convert Buffer to Base64 for delivery
-    // Convert Buffer to Base64 for delivery
-    const formattedDecorations = [];
-    for (let i = 0; i < decorations.length; i++) {
-        const d = decorations[i];
-        let imageData = null;
+    const formattedDecorations = decorations.map(d => {
+        let image = null;
         if (d.image) {
-            imageData = `data:image/jpeg;base64,${Buffer.from(d.image).toString("base64")}`;
+            image = `data:image/jpeg;base64,${Buffer.from(d.image).toString("base64")}`;
         }
-        formattedDecorations.push({
+        return {
             ...d,
-            image: imageData
-        });
-    }
+            image
+        };
+    });
 
     return NextResponse.json(formattedDecorations);
   } catch (error: any) {
