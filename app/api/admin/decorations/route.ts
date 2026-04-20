@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { getServerSession } from "@/lib/auth-helper";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
+  const session = await getServerSession();
+  if (session?.role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -25,10 +25,19 @@ export async function GET(req: Request) {
     });
 
     // Convert Buffer to Base64 for delivery
-    const formattedDecorations = decorations.map(d => ({
-      ...d,
-      image: d.image ? `data:image/jpeg;base64,${Buffer.from(d.image).toString("base64")}` : null
-    }));
+    // Convert Buffer to Base64 for delivery
+    const formattedDecorations = [];
+    for (let i = 0; i < decorations.length; i++) {
+        const d = decorations[i];
+        let imageData = null;
+        if (d.image) {
+            imageData = `data:image/jpeg;base64,${Buffer.from(d.image).toString("base64")}`;
+        }
+        formattedDecorations.push({
+            ...d,
+            image: imageData
+        });
+    }
 
     return NextResponse.json(formattedDecorations);
   } catch (error: any) {
@@ -37,13 +46,13 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
+  const session = await getServerSession();
+  if (session?.role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const { name, description, category, price, totalQty, image } = await req.json();
+    const { name, description, category, price, totalQty, image, availableQty } = await req.json();
     
     // Convert Base64 (with or without data: URI) to Buffer
     let imageBuffer = null;
@@ -52,14 +61,30 @@ export async function POST(req: Request) {
       imageBuffer = Buffer.from(base64Data, "base64");
     }
 
+    const priceFloat = Number(price);
+    const totalQtyInt = Number(totalQty);
+    const availableQtyInt = availableQty === undefined ? undefined : Number(availableQty);
+
+    if (Number.isNaN(priceFloat) || Number.isNaN(totalQtyInt)) {
+      return NextResponse.json({ error: "Invalid price or total quantity." }, { status: 400 });
+    }
+
+    if (availableQtyInt !== undefined && Number.isNaN(availableQtyInt)) {
+      return NextResponse.json({ error: "Invalid available quantity." }, { status: 400 });
+    }
+
+    if (availableQtyInt !== undefined && availableQtyInt > totalQtyInt) {
+      return NextResponse.json({ error: "Available quantity cannot exceed total quantity." }, { status: 400 });
+    }
+
     const decoration = await prisma.decoration.create({
       data: {
         name,
         description,
         // category: category || "General",
-        price: parseFloat(price),
-        totalQty: parseInt(totalQty),
-        availableQty: parseInt(totalQty),
+        price: priceFloat,
+        totalQty: totalQtyInt,
+        availableQty: availableQtyInt ?? totalQtyInt,
         image: imageBuffer,
       }
     });

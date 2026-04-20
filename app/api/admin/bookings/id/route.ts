@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { getServerSession } from "@/lib/auth-helper";
 import { NextResponse } from "next/server";
 
 export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
+  const session = await getServerSession();
+  if (session?.role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

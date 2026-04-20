@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/app/context/AuthContext";
 import { useRouter } from "next/navigation";
 import {
   Calendar, MapPin, Clock, Package, CheckCircle2, XCircle,
@@ -67,7 +67,7 @@ function BookingCard({ booking }: { booking: Booking }) {
             <Calendar className="w-7 h-7" />
           </div>
           <div>
-            <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-0.5">#{booking.id.slice(0,8)}</p>
+            <p className="text-xs font-extrabold text-indigo-600 uppercase tracking-widest mb-0.5">ID: {booking.id}</p>
             <p className="font-extrabold text-gray-900 text-lg flex items-center gap-1.5">
               <MapPin className="w-4 h-4 text-indigo-400 flex-shrink-0" />{booking.location}
             </p>
@@ -85,7 +85,7 @@ function BookingCard({ booking }: { booking: Booking }) {
       {/* Payment bar */}
       <div className="flex flex-wrap gap-6 px-6 py-3 bg-gray-50 border-y border-gray-200 text-sm">
         <div className="flex items-center gap-1.5 text-emerald-600 font-bold">
-          <DollarSign className="w-4 h-4" />Paid: ${booking.deposit.toLocaleString()}
+          <DollarSign className="w-4 h-4" />Paid: ${(booking.totalPrice - booking.balance).toLocaleString()}
         </div>
         <div className="flex items-center gap-1.5 text-amber-600 font-bold">
           <AlertCircle className="w-4 h-4" />Balance: ${booking.balance.toLocaleString()}
@@ -168,21 +168,27 @@ function BookingCard({ booking }: { booking: Booking }) {
 }
 
 export default function MyBookingsPage() {
-  const { data: session, status } = useSession();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
 
   useEffect(() => {
-    if (status === "unauthenticated") { router.push("/auth/login"); return; }
-    if (status === "authenticated") {
+    if (!isLoading && !user) {
+      router.push("/auth/login");
+      return;
+    }
+    if (user) {
       fetch("/api/user/bookings")
-        .then(r => r.json())
-        .then(data => { setBookings(Array.isArray(data) ? data : []); setLoading(false); })
+        .then((r) => r.json())
+        .then((data) => {
+          setBookings(Array.isArray(data) ? data : []);
+          setLoading(false);
+        })
         .catch(() => setLoading(false));
     }
-  }, [status, router]);
+  }, [user, isLoading, router]);
 
   const filtered = filter === "ALL" ? bookings : bookings.filter(b => b.status === filter);
 

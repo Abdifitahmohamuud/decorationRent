@@ -1,22 +1,58 @@
-import { paymentService } from "@/server/services/payment-service";
-import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "@/lib/auth-helper";
 import { sendEmail, emailTemplates } from "@/lib/email";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getServerSession();
+  if (!session?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const body = await req.json();
-    const payment = await paymentService.processPayment(body);
 
-    if (session.user.email) {
+    const payment = await prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findUnique({ where: { id: body.bookingId } });
+      if (!booking) throw new Error("Booking not found");
+
+      const createdPayment = await tx.payment.create({
+        data: {
+          bookingId: body.bookingId,
+          amount: body.amount,
+          method: body.method,
+          transactionId: body.transactionId,
+          status: "SUCCESS",
+          paidAt: new Date(),
+        },
+      });
+
+      const newBalance = Math.max(0, Math.round((booking.balance - body.amount) * 100) / 100);
+      let newStatus = booking.status;
+      if (newBalance <= booking.totalPrice - booking.deposit) {
+         newStatus = "CONFIRMED";
+      }
+      if (newBalance <= 0) {
+         newStatus = "COMPLETED"; // Or whatever logic you prefer
+      }
+
+      await tx.booking.update({
+        where: { id: body.bookingId },
+        data: {
+          balance: newBalance,
+          status: newStatus,
+          isLocked: true, 
+        },
+      });
+
+      return createdPayment;
+    });
+
+    if (session.email) {
       try {
-        const template = emailTemplates.paymentReceipt(payment.amount, 0); // Logic for balance can be updated
-        await sendEmail({ to: session.user.email, ...template });
+        const booking = await prisma.booking.findUnique({ where: { id: payment.bookingId } });
+        const template = emailTemplates.paymentReceipt(payment.bookingId, payment.amount, booking?.balance || 0);
+        await sendEmail({ to: session.email, ...template });
       } catch (emailError) {
         console.error("Email sending failed:", emailError);
       }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/app/context/AuthContext";
 import { 
   Users, 
   Calendar, 
@@ -46,7 +46,7 @@ interface ChartData {
 }
 
 export default function AdminDashboard() {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const [stats, setStats] = useState<Stats | null>(null);
   const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
   const [chartData, setChartData] = useState<ChartData[]>([]);
@@ -76,7 +76,7 @@ export default function AdminDashboard() {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Business Overview</h1>
-          <p className="text-gray-500 font-medium">Welcome back, {session?.user.name || "Admin"}. Here's what's happening today.</p>
+          <p className="text-gray-500 font-medium">Welcome back, {user?.fullName || "Admin"}. Here's what's happening today.</p>
         </div>
         <div className="flex items-center space-x-3">
           <div className="relative">
@@ -143,7 +143,7 @@ export default function AdminDashboard() {
             </select>
           </div>
           <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <AreaChart data={chartData || []}>
                 <defs>
                   <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">

@@ -1,14 +1,115 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  id             String         @id @default(uuid())
+  fullName       String
+  email          String         @unique
+  phone          String?        @unique
+  password       String
+  role           Role           @default(CUSTOMER)
+  isActive       Boolean        @default(true)
+  failedAttempts Int            @default(0)
+  lastLogin      DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  auditLogs      AuditLog[]
+  bookings       Booking[]
+  notifications  Notification[]
+  sessions       Session[]
+}
+
+model Decoration {
+  id               String        @id @default(uuid())
+  name             String
+  description      String
+  price            Float
+  priceUnitHours   Float         @default(1)
+  totalQty         Int
+  availableQty     Int
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  image            Bytes?
+  category         String        @default("General")
+  bookingItems     BookingItem[]
+}
+
+model Booking {
+  id           String        @id @default(uuid())
+  userId       String
+  eventDate    DateTime
+  endDate      DateTime
+  location     String
+  status       BookingStatus @default(PENDING)
+  totalPrice   Float
+  deposit      Float
+  balance      Float
+  isLocked     Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  user         User          @relation(fields: [userId], references: [id])
+  bookingItems BookingItem[]
+  payments     Payment[]
+}
+
+model BookingItem {
+  id           String     @id @default(uuid())
+  bookingId    String
+  decorationId String
+  quantity     Int
+  price        Float
+  booking      Booking    @relation(fields: [bookingId], references: [id])
+  decoration   Decoration @relation(fields: [decorationId], references: [id])
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  bookingId     String
+  amount        Float
+  method        PaymentMethod
+  transactionId String        @unique
+  status        PaymentStatus @default(PENDING)
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  booking       Booking       @relation(fields: [bookingId], references: [id])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  sentEmail Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 enum Role {
@@ -31,6 +132,8 @@ enum PaymentMethod {
   LOCAL_PREMIER_WALLET
   GLOBAL_MASTERCARD
   GLOBAL_PAYPAL
+  MOBILE_MONEY
+  CARD
 }
 
 enum PaymentStatus {
@@ -45,109 +148,3 @@ enum NotificationType {
   PAYMENT
   REMINDER
 }
-
-model User {
-  id             String         @id @default(uuid())
-  fullName       String
-  email          String         @unique
-  phone          String?        @unique
-  password       String
-  role           Role           @default(CUSTOMER)
-  isActive       Boolean        @default(true)
-  failedAttempts Int            @default(0)
-  lastLogin      DateTime?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  bookings       Booking[]
-  notifications  Notification[]
-  auditLogs      AuditLog[]
-  sessions       Session[]
-}
-
-model Decoration {
-  id           String        @id @default(uuid())
-  name         String
-  description  String
-  category     String        @default("General")
-  image        Bytes?
-  price        Float
-  totalQty     Int
-  availableQty Int
-  isActive     Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  bookingItems BookingItem[]
-}
-
-model Booking {
-  id           String        @id @default(uuid())
-  userId       String
-  user         User          @relation(fields: [userId], references: [id])
-  eventDate    DateTime
-  endDate      DateTime
-  location     String
-  status       BookingStatus @default(PENDING)
-  totalPrice   Float
-  deposit      Float
-  balance      Float
-  isLocked     Boolean       @default(false)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  bookingItems BookingItem[]
-  payments     Payment[]
-}
-
-model BookingItem {
-  id           String     @id @default(uuid())
-  bookingId    String
-  booking      Booking    @relation(fields: [bookingId], references: [id])
-  decorationId String
-  decoration   Decoration @relation(fields: [decorationId], references: [id])
-  quantity     Int
-  price        Float
-}
-
-model Payment {
-  id            String        @id @default(uuid())
-  bookingId     String
-  booking       Booking       @relation(fields: [bookingId], references: [id])
-  amount        Float
-  method        PaymentMethod
-  transactionId String        @unique
-  status        PaymentStatus @default(PENDING)
-  paidAt        DateTime?
-  createdAt     DateTime      @default(now())
-}
-
-model Notification {
-  id        String           @id @default(uuid())
-  userId    String
-  user      User             @relation(fields: [userId], references: [id])
-  message   String
-  type      NotificationType
-  isRead    Boolean          @default(false)
-  createdAt DateTime         @default(now())
-}
-
-model AuditLog {
-  id        String   @id @default(uuid())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id])
-  action    String
-  entity    String
-  entityId  String?
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
-}
-
-model Session {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-}
-
-

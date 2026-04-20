@@ -46,8 +46,8 @@ export default function BookingManagement() {
 
   const fetchBookings = async () => {
     const params = new URLSearchParams({
+      type: "active",
       status: statusFilter,
-      search: search
     });
     const res = await fetch(`/api/admin/bookings?${params.toString()}`);
     const data = await res.json();
@@ -57,7 +57,24 @@ export default function BookingManagement() {
 
   useEffect(() => {
     fetchBookings();
-  }, [statusFilter, search]);
+  }, [statusFilter]);
+
+  const filteredBookings = bookings.filter((b) => {
+    if (!search) return true;
+    const term = search.toLowerCase();
+    return (
+      b.id.toLowerCase().includes(term) ||
+      b.user.fullName.toLowerCase().includes(term) ||
+      b.user.email.toLowerCase().includes(term) ||
+      b.location.toLowerCase().includes(term) ||
+      b.status.toLowerCase().includes(term) ||
+      b.totalPrice.toString().includes(term) ||
+      b.deposit.toString().includes(term) ||
+      b.balance.toString().includes(term) ||
+      new Date(b.eventDate).toLocaleDateString().includes(term) ||
+      new Date(b.endDate).toLocaleDateString().includes(term)
+    );
+  });
 
   const updateStatus = async (id: string, newStatus: string) => {
     const res = await fetch(`/api/admin/bookings/${id}`, {
@@ -136,7 +153,7 @@ export default function BookingManagement() {
                 <tr>
                   <td colSpan={5} className="px-8 py-12 text-center text-gray-500 animate-pulse">Loading bookings...</td>
                 </tr>
-              ) : bookings.map((booking) => (
+              ) : filteredBookings.map((booking) => (
                 <tr key={booking.id} className="group hover:bg-gray-50/50 transition duration-200">
                   <td className="px-8 py-6">
                     <div className="flex items-center space-x-4">
@@ -144,7 +161,7 @@ export default function BookingManagement() {
                         <TrendingUp className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-none mb-1">#{booking.id.slice(0, 8)}</p>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1 text-ellipsis overflow-hidden">ID: {booking.id}</p>
                         <p className="font-bold text-gray-900 text-base mb-0.5">{booking.user.fullName}</p>
                       </div>
                     </div>
@@ -164,7 +181,7 @@ export default function BookingManagement() {
                   <td className="px-8 py-6">
                     <div className="flex flex-col">
                       <span className="font-extrabold text-gray-900">${booking.totalPrice.toLocaleString()}</span>
-                      <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Paid: ${booking.deposit}</span>
+                      <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Paid: ${(booking.totalPrice - booking.balance).toLocaleString()}</span>
                     </div>
                   </td>
                   <td className="px-8 py-6">

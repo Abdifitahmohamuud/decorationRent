@@ -1,11 +1,27 @@
-import { decorationService } from "@/server/services/decoration-service";
+import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { AvailabilityChecker } from "./AvailabilityChecker";
 import { AddToCartButton } from "@/components/AddToCartButton";
 
 export default async function DecorationsPage() {
-  const decorations = await decorationService.getAll();
+  const dbDecorations = await prisma.decoration.findMany({
+    where: { isActive: true },
+    orderBy: { createdAt: "desc" },
+  });
+  
+  const decorations = [];
+  for (let i = 0; i < dbDecorations.length; i++) {
+    const d = dbDecorations[i];
+    let imageData = null;
+    if (d.image) {
+      imageData = `data:image/jpeg;base64,${Buffer.from(d.image).toString("base64")}`;
+    }
+    decorations.push({
+      ...d,
+      image: imageData
+    });
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

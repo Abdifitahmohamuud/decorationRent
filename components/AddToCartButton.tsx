@@ -8,6 +8,7 @@ interface AddToCartButtonProps {
     id: string;
     name: string;
     price: number;
+    priceUnitHours?: number;
     availableQty: number;
     image?: string | null;
   };
@@ -23,6 +24,7 @@ export function AddToCartButton({ item }: AddToCartButtonProps) {
           decorationId: item.id,
           name: item.name,
           price: item.price,
+          priceUnitHours: item.priceUnitHours || 1,
           availableQty: item.availableQty,
           image: item.image,
         })

@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { getServerSession } from "@/lib/auth-helper";
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
+  const session = await getServerSession();
+  if (session?.role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -32,13 +32,23 @@ export async function GET() {
     });
 
     // Grouping manually to handle date formatting
+    // Grouping manually to handle date formatting
     const dailyData: Record<string, number> = {};
-    revenueByDay.forEach(p => {
+    for (let i = 0; i < revenueByDay.length; i++) {
+      const p = revenueByDay[i];
       const date = p.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
       dailyData[date] = (dailyData[date] || 0) + p.amount;
-    });
+    }
 
-    const chartData = Object.entries(dailyData).map(([date, amount]) => ({ date, amount }));
+    const chartData = [];
+    const dates = Object.keys(dailyData);
+    for (let i = 0; i < dates.length; i++) {
+      const date = dates[i];
+      chartData.push({
+        date: date,
+        amount: dailyData[date]
+      });
+    }
 
     // Recent bookings
     const recentBookings = await prisma.booking.findMany({

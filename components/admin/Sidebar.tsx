@@ -4,9 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, Package, Calendar, DollarSign,
-  LogOut, Sparkles, Bell, Shield, LogIn, ClipboardList, Wallet, CreditCard
+  LogOut, Sparkles, Bell, Shield, LogIn, ClipboardList, Wallet, CreditCard, Clock
 } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
+import { useAuth } from "@/app/context/AuthContext";
 import { cn } from "@/lib/utils";
 
 const menuGroups = [
@@ -16,6 +16,7 @@ const menuGroups = [
       { icon: LayoutDashboard, label: "Overview",       href: "/dashboard/admin" },
       { icon: Package,         label: "Inventory",      href: "/dashboard/admin/inventory" },
       { icon: Calendar,        label: "Bookings",       href: "/dashboard/admin/bookings" },
+      { icon: Clock,           label: "Booking History", href: "/dashboard/admin/bookings/history" },
       { icon: ClipboardList,   label: "Booking Items",  href: "/dashboard/admin/booking-items" },
       { icon: Users,           label: "Users",          href: "/dashboard/admin/users" },
       { icon: DollarSign,      label: "Payments",       href: "/dashboard/admin/payments" },
@@ -35,7 +36,7 @@ const menuGroups = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { user, logout } = useAuth();
 
   return (
     <aside className="w-72 bg-white border-r border-gray-200 flex flex-col h-screen sticky top-0">
@@ -88,16 +89,16 @@ export default function Sidebar() {
         <div className="bg-gray-50 rounded-2xl p-4 mb-4">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
-              {session?.user.name?.[0] || "A"}
+              {user?.fullName?.[0] || "A"}
             </div>
             <div className="flex-grow overflow-hidden">
-              <p className="text-sm font-bold text-gray-900 truncate">{session?.user.name || "Administrator"}</p>
-              <p className="text-xs text-gray-500 truncate">{session?.user.email}</p>
+              <p className="text-sm font-bold text-gray-900 truncate">{user?.fullName || "Administrator"}</p>
+              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
             </div>
           </div>
         </div>
         <button
-          onClick={() => signOut()}
+          onClick={() => logout()}
           className="w-full flex items-center space-x-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-2xl transition font-semibold text-sm"
         >
           <LogOut className="w-5 h-5" />

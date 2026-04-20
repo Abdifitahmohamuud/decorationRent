@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { getServerSession } from "@/lib/auth-helper";
 import { BookingStatus, PaymentStatus } from "@prisma/client";
 
 export async function GET() {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const session = await getServerSession();
+  if (session?.role !== "ADMIN") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     // 1. Cash on Hand (Sum of SUCCESS payments)
@@ -42,11 +42,15 @@ export async function GET() {
       _count: true
     });
 
-    const paymentBreakdown = paymentBreakdownQuery.map(pb => ({
-      method: pb.method,
-      totalAmount: pb._sum.amount || 0,
-      count: pb._count
-    }));
+    const paymentBreakdown = [];
+    for (let i = 0; i < paymentBreakdownQuery.length; i++) {
+      const pb = paymentBreakdownQuery[i];
+      paymentBreakdown.push({
+        method: pb.method,
+        totalAmount: pb._sum.amount || 0,
+        count: pb._count
+      });
+    }
 
     // 5. Recent Transactions
     const recentTransactions = await prisma.payment.findMany({

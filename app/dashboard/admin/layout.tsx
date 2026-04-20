@@ -1,7 +1,7 @@
 "use client";
 
 import Sidebar from "@/components/admin/Sidebar";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/app/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
@@ -11,16 +11,16 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { data: session, status } = useSession();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "unauthenticated" || (session && session.user.role !== "ADMIN")) {
+    if (!loading && (!user || user.role !== "ADMIN")) {
       router.push("/");
     }
-  }, [session, status, router]);
+  }, [user, loading, router]);
 
-  if (status === "loading") {
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
         <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
@@ -28,7 +28,7 @@ export default function AdminLayout({
     );
   }
 
-  if (!session || session.user.role !== "ADMIN") {
+  if (!user || user.role !== "ADMIN") {
     return null;
   }
 

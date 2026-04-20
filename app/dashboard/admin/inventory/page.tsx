@@ -21,6 +21,7 @@ interface Decoration {
   description: string;
   image: string | null;
   price: number;
+  priceUnitHours: number;
   totalQty: number;
   availableQty: number;
   isActive: boolean;
@@ -46,10 +47,13 @@ export default function InventoryManagement() {
   }, [search]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this item?")) return;
+    if (!confirm("Are you sure you want to delete this item? This will permanently remove it from the system.")) return;
     const res = await fetch(`/api/admin/decorations/${id}`, { method: "DELETE" });
     if (res.ok) fetchItems();
-    else alert((await res.json()).error);
+    else {
+      const error = await res.json();
+      alert(error.error || "Delete failed. If this item was ever booked, you must hide it instead of deleting it.");
+    }
   };
 
   const toggleStatus = async (item: Decoration) => {
@@ -135,7 +139,7 @@ export default function InventoryManagement() {
             <div className="p-6 flex-grow flex flex-col">
                <div className="flex justify-between items-start mb-2">
                  <h3 className="font-extrabold text-gray-900 text-lg leading-tight group-hover:text-indigo-600 transition truncate pr-4">{item.name}</h3>
-                 <span className="font-extrabold text-indigo-600">${item.price}</span>
+                 <span className="font-extrabold text-indigo-600 whitespace-nowrap text-right ml-2">${item.price} <span className="text-xs text-gray-400 font-medium block">/ {item.priceUnitHours === 1 ? 'hr' : `${item.priceUnitHours} hrs`}</span></span>
                </div>
                <p className="text-sm text-gray-500 line-clamp-2 mb-4 h-10">{item.description}</p>
                
@@ -167,14 +171,14 @@ export default function InventoryManagement() {
 function StatusBadge({ isActive, onToggle }: { isActive: boolean; onToggle: () => void }) {
   return (
     <button 
-      onClick={onToggle}
-      className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest border transition-all ${
+      onClick={(e) => { e.stopPropagation(); onToggle(); }}
+      className={`px-4 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest border transition-all shadow-lg backdrop-blur-md ${
         isActive 
-          ? "bg-white/90 text-emerald-600 border-emerald-100 shadow-sm backdrop-blur" 
-          : "bg-white/90 text-gray-500 border-gray-200 shadow-sm backdrop-blur"
+          ? "bg-emerald-500/90 text-white border-emerald-400" 
+          : "bg-rose-500/90 text-white border-rose-400"
       }`}
     >
-      {isActive ? "Available" : "Hidden"}
+      {isActive ? "Online / Available" : "Offline / Hidden"}
     </button>
   );
 }
@@ -184,9 +188,11 @@ function DecorationModal({ item, onClose, onSuccess }: any) {
     name: item?.name || "",
     description: item?.description || "",
     price: item?.price || 0,
+    priceUnitHours: item?.priceUnitHours || 1,
     totalQty: item?.totalQty || 1,
     image: item?.image || "",
-    isActive: item?.isActive ?? true
+    isActive: item?.isActive ?? true,
+    availableQty: item?.availableQty || 0
   });
 
   const handleSubmit = async (e: any) => {
@@ -200,12 +206,13 @@ function DecorationModal({ item, onClose, onSuccess }: any) {
       body: JSON.stringify({
         ...formData,
         price: Number(formData.price),
+        priceUnitHours: Number(formData.priceUnitHours),
         totalQty: Number(formData.totalQty)
       })
     });
 
     if (res.ok) onSuccess();
-    else alert("An error occurred");
+    else alert("You make some thing of wrong, try again later");
   };
 
   return (
@@ -252,6 +259,31 @@ function DecorationModal({ item, onClose, onSuccess }: any) {
                 className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500/20 font-bold text-indigo-600"
                 value={formData.price}
                 onChange={(e) => setFormData({...formData, price: Number(e.target.value)})}
+               />
+            </div>
+
+            <div className="space-y-2">
+               <label className="text-xs font-extrabold text-gray-500 uppercase tracking-widest ml-1">Price Duration (Hours)</label>
+               <input 
+                required
+                type="number" 
+                step="1"
+                min="1"
+                className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500/20 font-bold text-indigo-600"
+                value={formData.priceUnitHours}
+                onChange={(e) => setFormData({...formData, priceUnitHours: Number(e.target.value)})}
+               />
+            </div>
+
+             <div className="space-y-2">
+               <label className="text-xs font-extrabold text-gray-500 uppercase tracking-widest ml-1"> AvailableQty ($)</label>
+               <input 
+                required
+                type="number" 
+                step="0.01"
+                className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500/20 font-bold text-indigo-600"
+                value={formData.availableQty}
+                onChange={(e) => setFormData({...formData, availableQty: Number(e.target.value)})}
                />
             </div>
 

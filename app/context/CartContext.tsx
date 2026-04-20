@@ -7,6 +7,7 @@ export interface CartItem {
   decorationId: string;
   name: string;
   price: number;
+  priceUnitHours?: number;
   quantity: number;
   availableQty: number;
   image?: string | null;
@@ -49,44 +50,95 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [cartItems, isInitialized]);
 
   const addToCart = (item: Omit<CartItem, "quantity">) => {
-    const existing = cartItems.find((i) => i.decorationId === item.decorationId);
-    if (existing) {
+    let existingIndex = -1;
+    for (let i = 0; i < cartItems.length; i++) {
+        if (cartItems[i].decorationId === item.decorationId) {
+            existingIndex = i;
+            break;
+        }
+    }
+
+    if (existingIndex !== -1) {
+      const existing = cartItems[existingIndex];
       if (existing.quantity >= existing.availableQty) {
         toast.error(`Only ${existing.availableQty} available for ${existing.name}`);
         return;
       }
       toast.success(`Increased ${existing.name} quantity in cart!`);
-      setCartItems((prev) =>
-        prev.map((i) => (i.decorationId === item.decorationId ? { ...i, quantity: i.quantity + 1 } : i))
-      );
+      
+      const newItems = [];
+      for (let i = 0; i < cartItems.length; i++) {
+          if (i === existingIndex) {
+              newItems.push({ ...cartItems[i], quantity: cartItems[i].quantity + 1 });
+          } else {
+              newItems.push(cartItems[i]);
+          }
+      }
+      setCartItems(newItems);
     } else {
       toast.success(`Added ${item.name} to cart!`);
-      setCartItems((prev) => [...prev, { ...item, quantity: 1 }]);
+      const newItems = [];
+      for (let i = 0; i < cartItems.length; i++) {
+          newItems.push(cartItems[i]);
+      }
+      newItems.push({ ...item, quantity: 1 });
+      setCartItems(newItems);
     }
   };
 
   const updateQuantity = (decorationId: string, quantity: number) => {
-    const existing = cartItems.find((i) => i.decorationId === decorationId);
-    if (!existing) return;
+    let existingIndex = -1;
+    for (let i = 0; i < cartItems.length; i++) {
+        if (cartItems[i].decorationId === decorationId) {
+            existingIndex = i;
+            break;
+        }
+    }
+    
+    if (existingIndex === -1) return;
+    const existing = cartItems[existingIndex];
+    
     if (quantity > existing.availableQty) {
       toast.error(`Only ${existing.availableQty} available for ${existing.name}`);
       return;
     }
     if (quantity < 1) return;
-    setCartItems((prev) =>
-      prev.map((i) => (i.decorationId === decorationId ? { ...i, quantity } : i))
-    );
+
+    const newItems = [];
+    for (let i = 0; i < cartItems.length; i++) {
+        if (i === existingIndex) {
+            newItems.push({ ...cartItems[i], quantity: quantity });
+        } else {
+            newItems.push(cartItems[i]);
+        }
+    }
+    setCartItems(newItems);
   };
 
   const removeFromCart = (decorationId: string) => {
-    setCartItems((prev) => prev.filter((i) => i.decorationId !== decorationId));
+    const newItems = [];
+    for (let i = 0; i < cartItems.length; i++) {
+        if (cartItems[i].decorationId !== decorationId) {
+            newItems.push(cartItems[i]);
+        }
+    }
+    setCartItems(newItems);
     toast.success("Item removed from cart");
   };
 
   const clearCart = () => setCartItems([]);
 
-  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  let totalItemsCount = 0;
+  for (let i = 0; i < cartItems.length; i++) {
+      totalItemsCount += cartItems[i].quantity;
+  }
+  const totalItems = totalItemsCount;
+
+  let totalItemsPrice = 0;
+  for (let i = 0; i < cartItems.length; i++) {
+      totalItemsPrice += cartItems[i].price * cartItems[i].quantity;
+  }
+  const totalPrice = totalItemsPrice;
 
   return (
     <CartContext.Provider

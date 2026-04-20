@@ -1,15 +1,25 @@
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { getServerSession } from "@/lib/auth-helper";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const session = await getServerSession();
+  if (session?.role !== "ADMIN") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { searchParams } = new URL(req.url);
   const bookingId = searchParams.get("bookingId");
   try {
+    const now = new Date();
     const items = await prisma.bookingItem.findMany({
-      where: bookingId ? { bookingId } : {},
+      where: {
+        ...(bookingId ? { bookingId } : {
+           booking: {
+             AND: [
+               { status: { notIn: ["CANCELLED", "COMPLETED"] } },
+               { endDate: { gte: now } }
+             ]
+           }
+        }),
+      },
       include: {
         decoration: { select: { id: true, name: true, price: true } },
         booking: { include: { user: { select: { fullName: true } } } },
@@ -21,8 +31,8 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const session = await getServerSession();
+  if (session?.role !== "ADMIN") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const { id, quantity } = await req.json();
     if (!id || !quantity) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
@@ -32,8 +42,8 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const session = await getServerSession();
+  if (session?.role !== "ADMIN") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");

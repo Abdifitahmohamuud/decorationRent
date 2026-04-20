@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
+import { useAuth } from "@/app/context/AuthContext";
 import { ShoppingCart, LogOut, Menu } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "@/app/context/CartContext";
 
 export default function Navbar() {
-  const { data: session } = useSession();
+  const { user: session, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const { totalItems } = useCart();
 
@@ -27,7 +27,7 @@ export default function Navbar() {
             </Link>
             {session ? (
               <>
-                {session.user.role !== "ADMIN" && (
+                {session?.role !== "ADMIN" && (
                   <div className="flex items-center">
                     <Link href="/cart" className="relative text-gray-600 hover:text-indigo-600 mr-8">
                       <ShoppingCart className="w-6 h-6" />
@@ -42,15 +42,15 @@ export default function Navbar() {
                     </Link>
                   </div>
                 )}
-                {session.user.role === "ADMIN" && (
+                {session?.role === "ADMIN" && (
                   <Link href="/dashboard/admin" className="text-gray-600 hover:text-indigo-600">
                     Admin
                   </Link>
                 )}
                 <div className="flex items-center space-x-4">
-                  <span className="text-sm text-gray-500">Hi, {session.user.name || session.user.email}</span>
+                  <span className="text-sm text-gray-500">Hi, {session.fullName || session.email}</span>
                   <button
-                    onClick={() => signOut()}
+                    onClick={() => logout()}
                     className="flex items-center text-gray-600 hover:text-red-600"
                   >
                     <LogOut className="w-4 h-4 mr-1" />
@@ -103,18 +103,18 @@ export default function Navbar() {
           <Link href="/decorations" className="block text-gray-600 py-2">Decorations</Link>
           {session ? (
             <>
-              {session.user.role !== "ADMIN" && (
+              {session?.role !== "ADMIN" && (
                 <>
                   <Link href="/cart" className="block text-gray-600 py-2">Cart ({totalItems})</Link>
                   <Link href="/bookings" className="block text-indigo-600 font-medium py-2">My Bookings</Link>
                 </>
               )}
-              {session.user.role === "ADMIN" && (
+              {session?.role === "ADMIN" && (
                 <Link href="/dashboard/admin" className="block text-gray-600 py-2">Admin</Link>
               )}
-              <button onClick={() => signOut()} className="block text-red-600 py-2 w-full text-left">Sign Out</button>
-            </>
-          ) : (
+                  <button onClick={() => logout()} className="block text-red-600 py-2 w-full text-left">Sign Out</button>
+                </>
+              ) : (
             <>
               <Link href="/auth/login" className="block text-gray-600 py-2">Login</Link>
               <Link href="/auth/register" className="block text-indigo-600 py-2">Register</Link>

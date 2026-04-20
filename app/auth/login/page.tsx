@@ -1,14 +1,16 @@
 "use client";
 
-import { signIn } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Lock, Mail } from "lucide-react";
+import { useAuth } from "@/app/context/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { login } = useAuth();
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -27,20 +29,26 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const res = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
+      // Manual Login Call (Basic way)
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (res?.error) {
-        setError("Invalid email or password");
-      } else {
-        router.push("/");
-        router.refresh();
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Invalid login credentials");
       }
-    } catch (err) {
-      setError("An error occurred during login");
+
+      // Update global context & localStorage
+      login(data.user, data.token);
+      
+      router.push("/");
+      router.refresh();
+    } catch (err: any) {
+      setError(err.message || "An error occurred during login");
     } finally {
       setLoading(false);
     }

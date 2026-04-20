@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/app/context/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "react-hot-toast"; // I'll assume I should use a toast for feedback
-import { Calendar, MapPin, Package, CheckCircle } from "lucide-react";
+import { toast } from "react-hot-toast";
+import { Calendar, MapPin, Package, CheckCircle, Loader2 } from "lucide-react";
 
 interface Decoration {
   id: string;
@@ -14,13 +14,13 @@ interface Decoration {
 }
 
 export default function NewBookingPage() {
-  const { data: session, status } = useSession();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedItemId = searchParams.get("item");
 
   const [decorations, setDecorations] = useState<Decoration[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [fetchingDecorations, setFetchingDecorations] = useState(true);
   const [bookingData, setBookingData] = useState({
     eventDate: "",
     endDate: "",
@@ -39,7 +39,7 @@ export default function NewBookingPage() {
             items: [{ decorationId: selectedItemId, quantity: 1 }],
           }));
         }
-        setLoading(false);
+        setFetchingDecorations(false);
       });
   }, [selectedItemId]);
 
@@ -58,7 +58,8 @@ export default function NewBookingPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (status !== "authenticated") {
+    if (!user) {
+      toast.error("Please login to create a booking");
       router.push("/auth/login");
       return;
     }
@@ -72,18 +73,27 @@ export default function NewBookingPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        alert(data.error || "Failed to create booking");
+        toast.error(data.error || "Failed to create booking");
         return;
       }
 
       const booking = await res.json();
+      toast.success("Booking created! Proceeding to payment...");
       router.push(`/bookings/${booking.id}/payment`);
     } catch (err) {
       console.error(err);
+      toast.error("Something went wrong");
     }
   };
 
-  if (loading) return <div className="p-20 text-center">Loading decorations...</div>;
+  if (loading || fetchingDecorations) {
+    return (
+      <div className="flex flex-col items-center justify-center p-20 space-y-4">
+        <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
+        <p className="text-gray-500 font-medium anim-pulse">Loading booking details...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">

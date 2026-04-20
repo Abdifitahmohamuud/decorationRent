@@ -25,6 +25,7 @@ interface Payment {
   transactionId: string;
   status: string;
   createdAt: string;
+  bookingId: string;
   booking: {
     user: { fullName: string; email: string };
   };
@@ -39,7 +40,6 @@ export default function PaymentTracking() {
   const fetchPayments = async () => {
     const params = new URLSearchParams({
       status: statusFilter,
-      search: search
     });
     const res = await fetch(`/api/admin/payments?${params.toString()}`);
     const data = await res.json();
@@ -49,7 +49,22 @@ export default function PaymentTracking() {
 
   useEffect(() => {
     fetchPayments();
-  }, [statusFilter, search]);
+  }, [statusFilter]);
+
+  const filteredPayments = payments.filter((p) => {
+    if (!search) return true;
+    const term = search.toLowerCase();
+    return (
+      p.id.toLowerCase().includes(term) ||
+      p.transactionId.toLowerCase().includes(term) ||
+      p.amount.toString().includes(term) ||
+      p.status.toLowerCase().includes(term) ||
+      p.method.toLowerCase().replace("_", " ").includes(term) ||
+      p.bookingId.toLowerCase().includes(term) ||
+      p.booking.user.fullName.toLowerCase().includes(term) ||
+      new Date(p.createdAt).toLocaleDateString().includes(term)
+    );
+  });
 
   const totalRevenue = payments
     .filter(p => p.status === "SUCCESS")
@@ -144,7 +159,7 @@ export default function PaymentTracking() {
                 <tr>
                   <td colSpan={6} className="px-8 py-12 text-center text-gray-500 animate-pulse">Loading transactions...</td>
                 </tr>
-              ) : payments.map((payment) => (
+              ) : filteredPayments.map((payment) => (
                 <tr key={payment.id} className="group hover:bg-gray-50/50 transition">
                   <td className="px-8 py-6">
                     <div className="flex items-center space-x-3">
@@ -165,7 +180,10 @@ export default function PaymentTracking() {
                       <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-xs">
                         {payment.booking.user.fullName[0]}
                       </div>
-                      <span className="text-sm font-bold text-gray-700">{payment.booking.user.fullName}</span>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-gray-700">{payment.booking.user.fullName}</span>
+                        <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest text-ellipsis overflow-hidden">BK: {payment.bookingId}</span>
+                      </div>
                     </div>
                   </td>
                   <td className="px-8 py-6">
