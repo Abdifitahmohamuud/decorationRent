@@ -36,7 +36,7 @@ export async function POST(req: Request) {
         email,
         phone,
         password: hashedPassword,
-        role: "USER" // Default role
+        role: "CUSTOMER" // Default role
       },
     });
 
