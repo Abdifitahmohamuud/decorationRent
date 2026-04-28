@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export async function POST(req: Request) {
   try {
@@ -26,6 +27,14 @@ export async function POST(req: Request) {
     // Optional: Delete the OTP after verification so it can't be used again
     await prisma.otp.delete({
       where: { id: record.id },
+    });
+
+    const cookieStore = await cookies();
+    cookieStore.set("reg_verified", "true", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 15, // 15 mins
+      path: "/",
     });
 
     return NextResponse.json({ success: true, message: "Email verified" });
