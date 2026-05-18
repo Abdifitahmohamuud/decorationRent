@@ -18,10 +18,12 @@ model User {
   lastLogin      DateTime?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
-  auditLogs      AuditLog[]
-  bookings       Booking[]
-  notifications  Notification[]
-  sessions       Session[]
+  auditLogs            AuditLog[]
+  bookings             Booking[]
+  notifications        Notification[]
+  sessions             Session[]
+  returnedItems        ReturnedItem[]
+  cancellationRequests CancellationRequest[]
 }
 
 model Decoration {
@@ -36,8 +38,9 @@ model Decoration {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   image          Bytes?
-  category       String        @default("General")
+  category       String         @default("General")
   bookingItems   BookingItem[]
+  returnedItems  ReturnedItem[]
 }
 
 model Booking {
@@ -54,8 +57,9 @@ model Booking {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   user         User          @relation(fields: [userId], references: [id])
-  bookingItems BookingItem[]
-  payments     Payment[]
+  bookingItems  BookingItem[]
+  payments      Payment[]
+  returnedItems ReturnedItem[]
 }
 
 model BookingItem {
@@ -157,4 +161,44 @@ model Otp {
   createdAt DateTime @default(now())
 
   @@index([email, code])
+}
+
+model ReturnedItem {
+  id           String             @id @default(uuid())
+  bookingId    String
+  decorationId String
+  userId       String             // The person who returned it
+  quantity     Int
+  status       ReturnedItemStatus @default(OK)
+  remarks      String?
+  returnedAt   DateTime           @default(now())
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  booking      Booking    @relation(fields: [bookingId], references: [id])
+  decoration   Decoration @relation(fields: [decorationId], references: [id])
+  user         User       @relation(fields: [userId], references: [id])
+}
+
+enum ReturnedItemStatus {
+  OK
+  DAMAGED
+}
+
+model CancellationRequest {
+  id                String             @id @default(uuid())
+  originalBookingId String             @unique
+  userId            String
+  userName          String
+  bookingData       Json
+  status            CancellationStatus @default(PENDING)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  user              User               @relation(fields: [userId], references: [id])
+}
+
+enum CancellationStatus {
+  PENDING
+  SUCCESS_CANCELED
 }

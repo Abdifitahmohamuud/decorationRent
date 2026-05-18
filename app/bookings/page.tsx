@@ -57,6 +57,30 @@ function StatusBadge({ status }: { status: string }) {
 
 function BookingCard({ booking }: { booking: Booking }) {
   const [expanded, setExpanded] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  const diffMinutes = (new Date().getTime() - new Date(booking.createdAt).getTime()) / (1000 * 60);
+  const canCancel = (booking.status === "PENDING" || booking.status === "CONFIRMED") && diffMinutes <= 30;
+
+  const handleCancel = async () => {
+    if (!confirm("Are you sure you want to cancel this booking?")) return;
+    setCancelling(true);
+    try {
+      const res = await fetch("/api/cancellations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: booking.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to cancel");
+      alert("Cancellation request submitted. Our admin will review it.");
+      window.location.reload();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
@@ -153,14 +177,25 @@ function BookingCard({ booking }: { booking: Booking }) {
             </div>
           )}
 
-          {booking.status === "PENDING" && (
-            <Link
-              href={`/bookings/${booking.id}/payment`}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-100"
-            >
-              <CreditCard className="w-4 h-4" /> Pay Deposit
-            </Link>
-          )}
+          <div className="flex gap-4">
+            {booking.status === "PENDING" && (
+              <Link
+                href={`/bookings/${booking.id}/payment`}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-100"
+              >
+                <CreditCard className="w-4 h-4" /> Pay Deposit
+              </Link>
+            )}
+            {canCancel && (
+              <button
+                onClick={handleCancel}
+                disabled={cancelling}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-2xl font-bold hover:bg-red-700 transition shadow-lg shadow-red-100 disabled:opacity-50"
+              >
+                <XCircle className="w-4 h-4" /> {cancelling ? "Requesting..." : "Cancel Booking"}
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
