@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, Package, Calendar, DollarSign,
-  LogOut, Sparkles, Bell, Shield, LogIn, ClipboardList, Wallet, CreditCard, Clock, XCircle, RotateCcw
+  LogOut, Sparkles, Bell, Shield, LogIn, ClipboardList, Wallet, CreditCard, Clock, XCircle, RotateCcw, Truck
 } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ const menuGroups = [
     items: [
       { icon: LayoutDashboard, label: "Overview",       href: "/dashboard/admin" },
       { icon: Package,         label: "Inventory",      href: "/dashboard/admin/inventory" },
+      { icon: Truck,           label: "Taken Items",    href: "/dashboard/admin/taken-items" },
       { icon: RotateCcw,       label: "Returned Items", href: "/dashboard/admin/returned-items" },
       { icon: Calendar,        label: "Bookings",       href: "/dashboard/admin/bookings" },
       { icon: XCircle,         label: "Cancellations",  href: "/dashboard/admin/cancellations" },

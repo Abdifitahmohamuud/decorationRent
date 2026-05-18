@@ -24,6 +24,7 @@ model User {
   sessions             Session[]
   returnedItems        ReturnedItem[]
   cancellationRequests CancellationRequest[]
+  takenItems           TakenItem[]
 }
 
 model Decoration {
@@ -41,6 +42,7 @@ model Decoration {
   category       String         @default("General")
   bookingItems   BookingItem[]
   returnedItems  ReturnedItem[]
+  takenItems     TakenItem[]
 }
 
 model Booking {
@@ -49,7 +51,7 @@ model Booking {
   eventDate    DateTime
   endDate      DateTime
   location     String
-  status       BookingStatus @default(PENDING)
+  status       BookingStatus @default(REQUEST)
   totalPrice   Float
   deposit      Float
   balance      Float
@@ -60,6 +62,7 @@ model Booking {
   bookingItems  BookingItem[]
   payments      Payment[]
   returnedItems ReturnedItem[]
+  takenItems    TakenItem[]
 }
 
 model BookingItem {
@@ -125,8 +128,10 @@ enum Role {
 enum BookingStatus {
   PENDING
   CONFIRMED
-  CANCELLED
+  REQUEST
+  TAKEN
   COMPLETED
+  CANCELLED
 }
 
 enum PaymentMethod {
@@ -201,4 +206,20 @@ model CancellationRequest {
 enum CancellationStatus {
   PENDING
   SUCCESS_CANCELED
+}
+
+model TakenItem {
+  id           String    @id @default(uuid())
+  bookingId    String
+  decorationId String
+  userId       String    // The staff/admin who recorded it
+  quantity     Int
+  remarks      String?
+  takenAt      DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  booking      Booking    @relation(fields: [bookingId], references: [id])
+  decoration   Decoration @relation(fields: [decorationId], references: [id])
+  user         User       @relation(fields: [userId], references: [id])
 }

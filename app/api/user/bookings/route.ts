@@ -20,7 +20,11 @@ export async function GET() {
       orderBy: { createdAt: "desc" }
     });
 
-    // Convert decoration images to base64 for display
+    const cancellationRequests = await prisma.cancellationRequest.findMany({
+      where: { userId: session.id }
+    });
+    const cancelRequestBookingIds = new Set(cancellationRequests.map(r => r.originalBookingId));
+
     // Convert decoration images to base64 for display
     const formatted = [];
     for (let i = 0; i < bookings.length; i++) {
@@ -45,7 +49,8 @@ export async function GET() {
       
       formatted.push({
         ...b,
-        bookingItems: formattedItems
+        bookingItems: formattedItems,
+        hasCancelRequest: cancelRequestBookingIds.has(b.id)
       });
     }
 

@@ -11,7 +11,11 @@ export async function GET() {
   try {
     const totalUsers = await prisma.user.count({ where: { role: "CUSTOMER" } });
     const totalBookings = await prisma.booking.count();
-    const activeRentals = await prisma.booking.count({ where: { status: "CONFIRMED" } });
+    const activeRentals = await prisma.booking.count({
+      where: {
+        status: { in: ["TAKEN", "CONFIRMED"] }
+      }
+    });
     
     const totalRevenue = await prisma.payment.aggregate({
       where: { status: "SUCCESS" },

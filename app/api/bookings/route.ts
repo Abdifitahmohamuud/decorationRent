@@ -10,7 +10,7 @@ async function checkAvailability(decorationId: string, startDate: Date, endDate:
 
   const overlappingBookings = await prisma.booking.findMany({
     where: {
-      status: { in: [BookingStatus.CONFIRMED, BookingStatus.PENDING] },
+      status: { in: [BookingStatus.REQUEST, BookingStatus.TAKEN, BookingStatus.CONFIRMED, BookingStatus.PENDING] },
       OR: [
         {
           eventDate: { lte: endDate },
@@ -110,9 +110,14 @@ export async function POST(req: Request) {
 
       const deposit = Math.round((totalPrice * 0.2) * 100) / 100;
       
-      const paymentAmount = body.paymentAmount !== undefined ? Number(body.paymentAmount) : deposit;
-      if (paymentAmount < deposit - 0.1) throw new Error("Payment amount must be at least the 20% deposit.");
-      if (paymentAmount > totalPrice + 0.1) throw new Error("Payment cannot exceed total balance.");
+      let paymentAmount = body.paymentAmount !== undefined ? Number(body.paymentAmount) : deposit;
+      if (paymentAmount > totalPrice) {
+        paymentAmount = totalPrice;
+      }
+      
+      if (paymentAmount < deposit - 0.1) {
+        throw new Error(`Payment amount must be at least the 20% deposit of $${deposit}. (Provided: $${paymentAmount})`);
+      }
 
       const balance = Math.round((totalPrice - paymentAmount) * 100) / 100;
 

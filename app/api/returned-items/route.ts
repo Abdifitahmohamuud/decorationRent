@@ -36,6 +36,14 @@ export async function POST(req: Request) {
         });
       }
 
+      // Update booking status to COMPLETED
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: "COMPLETED"
+        }
+      });
+
       return item;
     });
 
@@ -60,7 +68,22 @@ export async function GET() {
         booking: true,
       }
     });
-    return NextResponse.json(returnedItems);
+
+    const formatted = returnedItems.map(item => {
+      let imageData = null;
+      if (item.decoration.image) {
+        imageData = `data:image/jpeg;base64,${Buffer.from(item.decoration.image).toString("base64")}`;
+      }
+      return {
+        ...item,
+        decoration: {
+          ...item.decoration,
+          image: imageData
+        }
+      };
+    });
+
+    return NextResponse.json(formatted);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

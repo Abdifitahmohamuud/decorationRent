@@ -52,12 +52,11 @@ export async function POST(req: Request) {
         }
       });
 
-      // Mark the booking as completed
+      // Mark the booking as paid (balance = 0)
       return await tx.booking.update({
         where: { id: booking.id },
         data: {
-          balance: 0,
-          status: BookingStatus.COMPLETED
+          balance: 0
         }
       });
     });

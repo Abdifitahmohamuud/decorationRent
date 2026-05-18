@@ -28,19 +28,11 @@ export async function POST(req: Request) {
       });
 
       const newBalance = Math.max(0, Math.round((booking.balance - body.amount) * 100) / 100);
-      let newStatus = booking.status;
-      if (newBalance <= booking.totalPrice - booking.deposit) {
-         newStatus = "CONFIRMED";
-      }
-      if (newBalance <= 0) {
-         newStatus = "COMPLETED"; // Or whatever logic you prefer
-      }
 
       await tx.booking.update({
         where: { id: body.bookingId },
         data: {
           balance: newBalance,
-          status: newStatus,
           isLocked: true, 
         },
       });

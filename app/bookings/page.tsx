@@ -37,17 +37,20 @@ interface Booking {
   createdAt: string;
   bookingItems: BookingItem[];
   payments: Payment[];
+  hasCancelRequest?: boolean;
 }
 
 const STATUS_CFG: Record<string, { classes: string; icon: React.ReactNode }> = {
   PENDING:   { classes: "bg-amber-50 text-amber-600 border-amber-200",   icon: <Clock className="w-3.5 h-3.5" /> },
   CONFIRMED: { classes: "bg-emerald-50 text-emerald-600 border-emerald-200", icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+  REQUEST:   { classes: "bg-amber-50 text-amber-600 border-amber-200",   icon: <Clock className="w-3.5 h-3.5" /> },
+  TAKEN:     { classes: "bg-emerald-50 text-emerald-600 border-emerald-200", icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
   COMPLETED: { classes: "bg-blue-50 text-blue-600 border-blue-200",       icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
   CANCELLED: { classes: "bg-red-50 text-red-600 border-red-200",          icon: <XCircle className="w-3.5 h-3.5" /> },
 };
 
 function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_CFG[status] || STATUS_CFG.PENDING;
+  const cfg = STATUS_CFG[status] || STATUS_CFG.REQUEST;
   return (
     <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wide ${cfg.classes}`}>
       {cfg.icon}{status}
@@ -60,7 +63,13 @@ function BookingCard({ booking }: { booking: Booking }) {
   const [cancelling, setCancelling] = useState(false);
 
   const diffMinutes = (new Date().getTime() - new Date(booking.createdAt).getTime()) / (1000 * 60);
-  const canCancel = (booking.status === "PENDING" || booking.status === "CONFIRMED") && diffMinutes <= 30;
+  const timeExpired = diffMinutes > 30;
+
+  // Show cancel button only if they haven't requested cancel yet, and booking is not CANCELLED or COMPLETED
+  const showCancelBtn = !booking.hasCancelRequest && booking.status !== "CANCELLED" && booking.status !== "COMPLETED";
+
+  // They can click it only if time hasn't expired and it is in REQUEST or PENDING stage (so they haven't picked up yet)
+  const canCancel = (booking.status === "REQUEST" || booking.status === "PENDING" || booking.status === "CONFIRMED") && !timeExpired;
 
   const handleCancel = async () => {
     if (!confirm("Are you sure you want to cancel this booking?")) return;
@@ -178,7 +187,7 @@ function BookingCard({ booking }: { booking: Booking }) {
           )}
 
           <div className="flex gap-4">
-            {booking.status === "PENDING" && (
+            {(booking.status === "PENDING" || booking.status === "REQUEST") && !booking.hasCancelRequest && (
               <Link
                 href={`/bookings/${booking.id}/payment`}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-100"
@@ -186,13 +195,19 @@ function BookingCard({ booking }: { booking: Booking }) {
                 <CreditCard className="w-4 h-4" /> Pay Deposit
               </Link>
             )}
-            {canCancel && (
+            {showCancelBtn && (
               <button
                 onClick={handleCancel}
-                disabled={cancelling}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-2xl font-bold hover:bg-red-700 transition shadow-lg shadow-red-100 disabled:opacity-50"
+                disabled={cancelling || !canCancel}
+                className={`inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition shadow-lg ${
+                  canCancel 
+                    ? "bg-red-600 text-white hover:bg-red-700 shadow-red-100" 
+                    : "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none"
+                }`}
+                title={!canCancel ? "Booking can only be cancelled within 30 minutes of creation." : ""}
               >
-                <XCircle className="w-4 h-4" /> {cancelling ? "Requesting..." : "Cancel Booking"}
+                <XCircle className="w-4 h-4" /> 
+                {cancelling ? "Requesting..." : !canCancel ? "Cancel (Time Limit Passed)" : "Cancel Booking"}
               </button>
             )}
           </div>

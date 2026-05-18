@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Package, AlertCircle, CheckCircle, Search, Calendar, User, DollarSign } from "lucide-react";
+import { Package, AlertCircle, CheckCircle, Search, Calendar, User, DollarSign, Edit2, Trash2, X } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 
 export default function ReturnedItemsPage() {
@@ -9,7 +9,7 @@ export default function ReturnedItemsPage() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Form states
+  // Form states for adding return
   const [showForm, setShowForm] = useState(false);
   const [searchBookingId, setSearchBookingId] = useState("");
   const [booking, setBooking] = useState<any>(null);
@@ -19,6 +19,13 @@ export default function ReturnedItemsPage() {
 
   // Item statuses: map decorationId -> status & remarks
   const [itemStatuses, setItemStatuses] = useState<Record<string, { status: string, remarks: string }>>({});
+
+  // History filtering & CRUD states
+  const [filterQuery, setFilterQuery] = useState("");
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [editQty, setEditQty] = useState(0);
+  const [editStatus, setEditStatus] = useState("OK");
+  const [editRemarks, setEditRemarks] = useState("");
 
   useEffect(() => {
     fetchItems();
@@ -47,6 +54,10 @@ export default function ReturnedItemsPage() {
       const res = await fetch(`/api/bookings/${searchBookingId.trim()}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to fetch booking");
+
+      if (data.status !== "TAKEN" && data.status !== "CONFIRMED") {
+        throw new Error(`Only bookings with TAKEN status can be returned. Current status is ${data.status}`);
+      }
 
       if (data.returnedItems && data.returnedItems.length > 0) {
         throw new Error("This booking has already been processed and returned.");
@@ -107,12 +118,62 @@ export default function ReturnedItemsPage() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this return record? This will revert inventory effects and booking status if no other returns remain.")) return;
+    try {
+      const res = await fetch(`/api/returned-items/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete record");
+      alert("Return record deleted successfully!");
+      fetchItems();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const startEdit = (item: any) => {
+    setEditingItem(item);
+    setEditQty(item.quantity);
+    setEditStatus(item.status);
+    setEditRemarks(item.remarks || "");
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editingItem) return;
+    try {
+      const res = await fetch(`/api/returned-items/${editingItem.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quantity: Number(editQty),
+          status: editStatus,
+          remarks: editRemarks
+        })
+      });
+      if (!res.ok) throw new Error("Failed to update record");
+      alert("Return record updated successfully!");
+      setEditingItem(null);
+      fetchItems();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const filteredItems = items.filter(item => {
+    const q = filterQuery.toLowerCase();
+    return (
+      item.bookingId?.toLowerCase().includes(q) ||
+      item.decoration?.name?.toLowerCase().includes(q) ||
+      item.remarks?.toLowerCase().includes(q) ||
+      item.user?.fullName?.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Returned Items</h1>
-          <p className="text-gray-500">Record and monitor returned decoration items.</p>
+          <p className="text-gray-500">Record, monitor and manage returned decoration items.</p>
         </div>
         <button
           onClick={() => { setShowForm(!showForm); setBooking(null); setSearchBookingId(""); setSearchError(""); }}
@@ -175,8 +236,8 @@ export default function ReturnedItemsPage() {
                 <div className="space-y-4">
                   {booking.bookingItems.map((item: any) => (
                     <div key={item.id} className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-white border rounded-xl">
-                      <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        {item.decoration?.image ? <img src={item.decoration.image} className="w-full h-full object-cover rounded-lg" /> : <Package className="text-gray-400 w-6 h-6" />}
+                      <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {item.decoration?.image ? <img src={item.decoration.image} className="w-full h-full object-cover" /> : <Package className="text-gray-400 w-6 h-6" />}
                       </div>
                       <div className="flex-1">
                         <p className="font-bold text-gray-900">{item.decoration?.name}</p>
@@ -224,6 +285,18 @@ export default function ReturnedItemsPage() {
         </div>
       )}
 
+      {/* Global Filter Bar */}
+      <div className="bg-white p-4 rounded-xl border mb-6 shadow-sm flex items-center relative">
+        <Search className="w-5 h-5 absolute left-7 text-gray-400" />
+        <input 
+          type="text"
+          value={filterQuery}
+          onChange={e => setFilterQuery(e.target.value)}
+          className="w-full border bg-gray-50 rounded-lg pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+          placeholder="Search returns by booking ID, decoration name, remarks, customer name..."
+        />
+      </div>
+
       {/* History Table */}
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         {loading ? (
@@ -238,19 +311,32 @@ export default function ReturnedItemsPage() {
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">Processed By</th>
                 <th className="px-6 py-4">Date</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
-              {items.length === 0 ? (
+              {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                    No returned items recorded yet.
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                    No returned items matched your search.
                   </td>
                 </tr>
               ) : (
-                items.map((item) => (
+                filteredItems.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 font-medium">{item.decoration?.name || item.decorationId}</td>
+                    <td className="px-6 py-4 font-medium flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {item.decoration?.image ? (
+                          <img src={item.decoration.image} className="w-full h-full object-cover" />
+                        ) : (
+                          <Package className="w-5 h-5 text-gray-400" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900">{item.decoration?.name || item.decorationId}</p>
+                        {item.remarks && <p className="text-xs text-gray-500 italic">Notes: {item.remarks}</p>}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-xs text-gray-500 font-mono">{item.bookingId}</td>
                     <td className="px-6 py-4 font-bold">{item.quantity}</td>
                     <td className="px-6 py-4">
@@ -266,6 +352,24 @@ export default function ReturnedItemsPage() {
                     </td>
                     <td className="px-6 py-4 text-gray-600">{item.user?.fullName || 'System'}</td>
                     <td className="px-6 py-4 text-gray-500">{new Date(item.returnedAt).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button 
+                          onClick={() => startEdit(item)}
+                          className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                          title="Edit record"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(item.id)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                          title="Delete record"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}
@@ -273,6 +377,77 @@ export default function ReturnedItemsPage() {
           </table>
         )}
       </div>
+
+      {/* Edit Modal */}
+      {editingItem && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center bg-gray-50 px-6 py-4 border-b">
+              <h3 className="font-bold text-gray-900">Edit Return Record</h3>
+              <button 
+                onClick={() => setEditingItem(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-xs font-extrabold text-gray-400 uppercase tracking-widest block mb-2">Decoration</label>
+                <p className="font-bold text-gray-900">{editingItem.decoration?.name}</p>
+              </div>
+
+              <div>
+                <label className="text-xs font-extrabold text-gray-400 uppercase tracking-widest block mb-2">Quantity</label>
+                <input 
+                  type="number"
+                  value={editQty}
+                  onChange={e => setEditQty(Number(e.target.value))}
+                  className="w-full border rounded-lg p-2.5 text-sm"
+                  min={1}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-extrabold text-gray-400 uppercase tracking-widest block mb-2">Condition</label>
+                <select 
+                  value={editStatus}
+                  onChange={e => setEditStatus(e.target.value)}
+                  className="w-full border rounded-lg p-2.5 text-sm bg-white font-bold"
+                >
+                  <option value="OK">OK</option>
+                  <option value="DAMAGED">DAMAGED</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-extrabold text-gray-400 uppercase tracking-widest block mb-2">Remarks</label>
+                <input 
+                  type="text"
+                  value={editRemarks}
+                  onChange={e => setEditRemarks(e.target.value)}
+                  className="w-full border rounded-lg p-2.5 text-sm"
+                  placeholder="E.g. scratched, missing part..."
+                />
+              </div>
+            </div>
+            <div className="bg-gray-50 px-6 py-4 border-t flex justify-end gap-3">
+              <button 
+                onClick={() => setEditingItem(null)}
+                className="px-4 py-2 border rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleEditSubmit}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
