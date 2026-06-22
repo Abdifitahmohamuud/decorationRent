@@ -38,6 +38,9 @@ export async function POST(req: Request) {
       });
 
       return createdPayment;
+    }, {
+      maxWait: 15000,
+      timeout: 30000,
     });
 
     if (session.email) {

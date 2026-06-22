@@ -4,11 +4,11 @@ import { getServerSession } from "@/lib/auth-helper";
 import { sendEmail, emailTemplates } from "@/lib/email";
 import { NextResponse } from "next/server";
 
-async function checkAvailability(decorationId: string, startDate: Date, endDate: Date, requestedQty: number) {
-  const decoration = await prisma.decoration.findUnique({ where: { id: decorationId } });
+async function checkAvailability(tx: any, decorationId: string, startDate: Date, endDate: Date, requestedQty: number) {
+  const decoration = await tx.decoration.findUnique({ where: { id: decorationId } });
   if (!decoration) throw new Error("Decoration not found");
 
-  const overlappingBookings = await prisma.booking.findMany({
+  const overlappingBookings = await tx.booking.findMany({
     where: {
       status: { in: [BookingStatus.REQUEST, BookingStatus.TAKEN, BookingStatus.CONFIRMED, BookingStatus.PENDING] },
       OR: [
@@ -90,7 +90,7 @@ export async function POST(req: Request) {
         const decoration = await tx.decoration.findUnique({ where: { id: item.decorationId } });
         if (!decoration) throw new Error(`Decoration ${item.decorationId} not found`);
 
-        const isAvailable = await checkAvailability(item.decorationId, eventDate, endDate, item.quantity);
+        const isAvailable = await checkAvailability(tx, item.decorationId, eventDate, endDate, item.quantity);
         if (!isAvailable) throw new Error(`Decoration ${decoration.name} is not available for these dates`);
 
         let durationHours = (endDate.getTime() - eventDate.getTime()) / (1000 * 60 * 60);
@@ -161,6 +161,9 @@ export async function POST(req: Request) {
       }
 
       return createdBooking;
+    }, {
+      maxWait: 15000,
+      timeout: 30000,
     });
 
     if (session.email) {
