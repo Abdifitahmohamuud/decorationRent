@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/auth-helper";
+import { uploadToSupabase } from "@/lib/uploud";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
@@ -24,19 +25,8 @@ export async function GET(req: Request) {
       orderBy: { updatedAt: "desc" }
     });
 
-    // Convert Buffer to Base64 for delivery
-    const formattedDecorations = decorations.map(d => {
-        let image = null;
-        if (d.image) {
-            image = `data:image/jpeg;base64,${Buffer.from(d.image).toString("base64")}`;
-        }
-        return {
-            ...d,
-            image
-        };
-    });
 
-    return NextResponse.json(formattedDecorations);
+    return NextResponse.json(decorations);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -50,13 +40,20 @@ export async function POST(req: Request) {
 
   try {
     const { name, description, category, price, totalQty, image, availableQty } = await req.json();
-    
-    // Convert Base64 (with or without data: URI) to Buffer
-    let imageBuffer = null;
-    if (image && typeof image === "string") {
-      const base64Data = image.includes("base64,") ? image.split("base64,")[1] : image;
-      imageBuffer = Buffer.from(base64Data, "base64");
-    }
+
+  // Convert Base64 (with or without data: URI) to Buffer
+  let imageUrl = null;
+  if (image && typeof image === "string") {
+    const base64Data = image.includes("base64,") ? image.split("base64,")[1] : image;
+    const imageBuffer = Buffer.from(base64Data, "base64");
+    // Upload to Supabase and get public URL
+    const uploadedUrl = await uploadToSupabase({
+      originalname: `upload_${Date.now()}.jpg`,
+      mimetype: "image/jpeg",
+      buffer: imageBuffer
+    }, "decorations");
+    imageUrl = uploadedUrl;
+  }
 
     const priceFloat = Number(price);
     const totalQtyInt = Number(totalQty);
@@ -78,11 +75,11 @@ export async function POST(req: Request) {
       data: {
         name,
         description,
-        // category: category || "General",
+        
         price: priceFloat,
         totalQty: totalQtyInt,
         availableQty: availableQtyInt ?? totalQtyInt,
-        image: imageBuffer,
+        image:imageUrl,
       }
     });
 

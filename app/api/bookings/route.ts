@@ -88,7 +88,10 @@ export async function POST(req: Request) {
 
       for (const item of body.items) {
         const decoration = await tx.decoration.findUnique({ where: { id: item.decorationId } });
-        if (!decoration) throw new Error(`Decoration ${item.decorationId} not found`);
+        if (!decoration) {
+          // Throw a specific error to be caught later and responded with 400
+          throw new Error(`DECORATION_NOT_FOUND:${item.decorationId}`);
+        }
 
         const isAvailable = await checkAvailability(tx, item.decorationId, eventDate, endDate, item.quantity);
         if (!isAvailable) throw new Error(`Decoration ${decoration.name} is not available for these dates`);
@@ -167,16 +170,28 @@ export async function POST(req: Request) {
     });
 
     if (session.email) {
-      const template = emailTemplates.bookingConfirmation(
-        booking.id,
-        booking.eventDate.toDateString(),
-        booking.totalPrice
-      );
-      await sendEmail({ to: session.email, ...template });
+      try {
+        const template = emailTemplates.bookingConfirmation(
+          booking.id,
+          booking.eventDate.toDateString(),
+          booking.totalPrice
+        );
+        await sendEmail({ to: session.email, ...template });
+      } catch (emailError) {
+        console.error('Failed to send booking confirmation email:', emailError);
+        // Continue without failing the request
+      }
     }
 
     return NextResponse.json(booking);
   } catch (error: any) {
+    // Detect missing decoration error and respond with 400 Bad Request
+    if (error.message.startsWith('DECORATION_NOT_FOUND')) {
+      const missingId = error.message.split(':')[1];
+      return NextResponse.json({ error: `Decoration ${missingId} not found` }, { status: 400 });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
 }
+

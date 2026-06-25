@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  //url = env("DATABASE_URL")
 }
 
 model User {
@@ -38,7 +39,7 @@ model Decoration {
   isActive       Boolean       @default(true)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-  image          Bytes?
+  image          String?   // optional legacy image data
   category       String         @default("General")
   bookingItems   BookingItem[]
   returnedItems  ReturnedItem[]

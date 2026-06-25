@@ -9,16 +9,11 @@ export default async function DecorationsPage() {
     where: { isActive: true },
     orderBy: { createdAt: "desc" },
   });
-  
+
   const decorations = dbDecorations.map(d => {
-    let image = null;
-    if (d.image) {
-      const base64 = Buffer.from(d.image).toString("base64");
-      // Basic check for image format, defaulting to jpeg if unsure
-      image = `data:image/jpeg;base64,${base64}`;
-    }
-    return { ...d, image };
-  });
+  const image = d.image ? d.image : null;
+  return { ...d, image };
+});
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -56,21 +51,20 @@ export default async function DecorationsPage() {
               <h3 className="text-xl font-bold text-gray-900 mb-2">{item.name}</h3>
               <p className="text-gray-500 text-sm line-clamp-2 mb-4">{item.description}</p>
               <div className="flex justify-between items-center text-sm">
-                <span className={`px-2 py-1 rounded-md font-medium ${
-                  item.availableQty > 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
-                }`}>
+                <span className={`px-2 py-1 rounded-md font-medium ${item.availableQty > 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                  }`}>
                   {item.availableQty > 0 ? `${item.availableQty} available` : "Out of stock"}
                 </span>
-                
+
                 {item.availableQty > 0 ? (
-                  <AddToCartButton 
+                  <AddToCartButton
                     item={{
                       id: item.id,
                       name: item.name,
                       price: item.price,
                       availableQty: item.availableQty,
                       image: item.image, // Already a base64 string
-                    }} 
+                    }}
                   />
                 ) : (
                   <AvailabilityChecker itemId={item.id} />

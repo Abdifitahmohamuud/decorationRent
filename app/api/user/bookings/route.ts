@@ -30,14 +30,14 @@ export async function GET() {
     for (let i = 0; i < bookings.length; i++) {
       const b = bookings[i];
       const formattedItems = [];
-      
+
       for (let j = 0; j < b.bookingItems.length; j++) {
         const item = b.bookingItems[j];
         let imageData = null;
         if (item.decoration.image) {
           imageData = `data:image/jpeg;base64,${Buffer.from(item.decoration.image).toString("base64")}`;
         }
-        
+
         formattedItems.push({
           ...item,
           decoration: {
@@ -46,7 +46,7 @@ export async function GET() {
           }
         });
       }
-      
+
       formatted.push({
         ...b,
         bookingItems: formattedItems,

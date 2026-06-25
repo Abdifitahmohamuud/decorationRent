@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/auth-helper";
 import { NextResponse } from "next/server";
+import { uploadToSupabase } from "@/lib/uploud";
 
 export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const session = await getServerSession();
+  
   if (session?.role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -17,10 +19,11 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
     const totalQtyInt = totalQty !== undefined ? Number(totalQty) : undefined;
     const availableQtyInt = availableQty !== undefined ? Number(availableQty) : undefined;
 
+    // Validation checks
     if (priceFloat !== undefined && Number.isNaN(priceFloat)) {
       return NextResponse.json({ error: "Invalid price." }, { status: 400 });
     }
-    
+
     if (priceUnitHoursFloat !== undefined && Number.isNaN(priceUnitHoursFloat)) {
       return NextResponse.json({ error: "Invalid price unit hours." }, { status: 400 });
     }
@@ -37,19 +40,35 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
       return NextResponse.json({ error: "Available quantity cannot exceed total quantity." }, { status: 400 });
     }
 
-    // Convert Base64 to Buffer if image is provided
+    // Diyaari xogta la cusboonaysiinayo (Update)
     let updateData: any = {};
     if (name) updateData.name = name;
     if (description) updateData.description = description;
-    // if (category) updateData.category = category;
     if (priceFloat !== undefined) updateData.price = priceFloat;
     if (priceUnitHoursFloat !== undefined) updateData.priceUnitHours = priceUnitHoursFloat;
     if (totalQtyInt !== undefined) updateData.totalQty = totalQtyInt;
     if (isActive !== undefined) updateData.isActive = isActive;
     if (availableQtyInt !== undefined) updateData.availableQty = availableQtyInt;
+
+    // MAARAYNTA SAWIRKA (Halkan waxaa loo habeeyay sidii POST-kaaga):
     if (image && typeof image === "string") {
-      const base64Data = image.includes("base64,") ? image.split("base64,")[1] : image;
-      updateData.image = Buffer.from(base64Data, "base64");
+      // Haddii uu yahay sawir cusub oo foomka laga soo doortay (Base64)
+      if (image.startsWith("data:image") || !image.startsWith("http")) {
+        const base64Data = image.includes("base64,") ? image.split("base64,")[1] : image;
+        const imageBuffer = Buffer.from(base64Data, "base64");
+        
+        // U dhiib Object sax ah siday `uploadToSupabase` u baahnayd
+        const uploadedUrl = await uploadToSupabase({
+          originalname: `update_${Date.now()}.jpg`,
+          mimetype: "image/jpeg",
+          buffer: imageBuffer
+        }, "decorations");
+        
+        updateData.image = uploadedUrl; 
+      } else {
+        // Haddii uu yahay URL-kii hore oo aan la beddelin (wuxuu ku bilaawdaa http)
+        updateData.image = image;
+      }
     }
 
     const decoration = await prisma.decoration.update({
@@ -67,6 +86,7 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
 export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const session = await getServerSession();
+  
   if (session?.role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

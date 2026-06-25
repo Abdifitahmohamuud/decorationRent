@@ -29,35 +29,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     // Convert decoration images to base64 for display
-    const formattedItems = [];
-    for (let j = 0; j < booking.bookingItems.length; j++) {
-      const item = booking.bookingItems[j];
-      let imageData = null;
-      if (item.decoration.image) {
-        imageData = `data:image/jpeg;base64,${Buffer.from(item.decoration.image).toString("base64")}`;
-      }
-      
-      formattedItems.push({
-        ...item,
-        decoration: {
-          ...item.decoration,
-          image: imageData
-        }
-      });
-    }
+    
 
-    const formattedBooking = {
-      ...booking,
-      bookingItems: formattedItems
-    };
+   
 
-    // Only Admin/Staff can view ANY booking, customers can only view their own
-    if (session.role !== "ADMIN" && session.role !== "STAFF" && booking.userId !== session.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    return NextResponse.json(formattedBooking);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  // Only Admin/Staff can view ANY booking, customers can only view their own
+  if (session.role !== "ADMIN" && session.role !== "STAFF" && booking.userId !== session.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  return NextResponse.json(booking);
+} catch (error: any) {
+  return NextResponse.json({ error: error.message }, { status: 500 });
+}
 }
