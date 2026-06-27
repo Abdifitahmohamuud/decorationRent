@@ -1,11 +1,8 @@
-import { prisma } from "@/lib/prisma"; // 1. Kani wuxuu ka maqnaa feylkaaga labaad!
+import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/auth-helper";
 import { NextResponse } from "next/server";
 import { BookingStatus } from "@prisma/client";
 
-// ==========================================
-// POST: Abuurista Taken Item & Validation
-// ==========================================
 export async function POST(req: Request) {
   const session = await getServerSession();
   if (!session?.id || (session.role !== "ADMIN" && session.role !== "STAFF")) {
@@ -15,70 +12,50 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { bookingId, decorationId, userId, quantity, remarks } = body;
+    console.log('POST /taken-items received body:', body);
 
-    // Payload validation caadi ah
-    if (!bookingId || !decorationId || !userId || quantity === undefined) {
-      return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
+    // Basic validation of required fields
+    if (!bookingId || !decorationId || !userId || quantity == null) {
+      return NextResponse.json({ error: "Missing required fields: bookingId, decorationId, userId, quantity" }, { status: 400 });
     }
 
-    const qty = Number(quantity);
-    if (Number.isNaN(qty) || qty <= 0) {
-      return NextResponse.json({ error: "Invalid quantity supplied." }, { status: 400 });
+    // Verify related records exist
+    const [booking, decoration] = await Promise.all([
+      prisma.booking.findUnique({ where: { id: bookingId } }),
+      prisma.decoration.findUnique({ where: { id: decorationId } })
+    ]);
+    console.log('Fetched booking:', booking, 'Fetched decoration:', decoration);
+    if (!booking) {
+      return NextResponse.json({ error: `Booking with id ${bookingId} not found` }, { status: 404 });
+    }
+    if (!decoration) {
+      return NextResponse.json({ error: `Decoration with id ${decorationId} not found` }, { status: 404 });
     }
 
     const takenItem = await prisma.$transaction(async (tx) => {
-      // 1. Hubi in Booking-ku jiro
-      const booking = await tx.booking.findUnique({ where: { id: bookingId } });
-      if (!booking) {
-        throw new Error("Booking not found.");
-      }
-
-      // 2. Hubi in Decoration-ku jiro, stock-na laga heli karo
-      const decoration = await tx.decoration.findUnique({ where: { id: decorationId } });
-      if (!decoration) {
-        throw new Error("Decoration not found.");
-      }
-      if (decoration.availableQty !== null && decoration.availableQty < qty) {
-        throw new Error("Insufficient available quantity for the decoration.");
-      }
-
-      // 3. Abuur diiwaanka ah in alaabta la qaatay (Taken Item)
       const item = await tx.takenItem.create({
         data: {
           bookingId,
           decorationId,
           userId,
-          quantity: qty,
+          quantity: Number(quantity),
           remarks,
         }
       });
-
-      // 4. Ka dhim tirada stock-ka ee u diiwaangashan Decoration-ka
-      if (decoration.availableQty !== null) {
-        await tx.decoration.update({
-          where: { id: decorationId },
-          data: { availableQty: decoration.availableQty - qty }
-        });
-      }
-
-      // 5. U beddel Booking status-kiisa TAKEN
       await tx.booking.update({
         where: { id: bookingId },
         data: { status: BookingStatus.TAKEN }
       });
-
       return item;
     });
 
     return NextResponse.json(takenItem);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Error in POST /taken-items:', error);
+    return NextResponse.json({ error: error.message, stack: error.stack }, { status: 500 });
   }
 }
 
-// ==========================================
-// GET: Soo aqrinaya dhamaan Taken Items
-// ==========================================
 export async function GET() {
   const session = await getServerSession();
   if (!session?.id || (session.role !== "ADMIN" && session.role !== "STAFF")) {
@@ -95,20 +72,22 @@ export async function GET() {
       }
     });
 
-    // Maadaama `image` uu hadda yahay URL caadi ah oo Supabase ah,
-    // Looma baahna Buffer conversion, si toos ah u dhiib.
     const formatted = takenItems.map(item => {
+      let imageData = null;
+      if (item.decoration.image) {
+        imageData = `data:image/jpeg;base64,${Buffer.from(item.decoration.image).toString("base64")}`;
+      }
       return {
         ...item,
         decoration: {
           ...item.decoration,
-          image: item.decoration.image // Waa URL nadiif ah sidayda hore
+          image: imageData
         }
       };
     });
 
     return NextResponse.json(formatted);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message ,messgae : "error 2"}, { status: 500 });
   }
 }
