@@ -82,6 +82,54 @@ export async function POST(req: Request) {
     const eventDate = new Date(body.eventDate);
     const endDate = new Date(body.endDate);
 
+    // Event Date Validations
+    const now = new Date();
+    let isDateOnly = false;
+    if (typeof body.eventDate === 'string' && !body.eventDate.includes(':') && !body.eventDate.includes('T')) {
+      isDateOnly = true;
+    }
+
+    if (isDateOnly) {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const eventDateStart = new Date(eventDate);
+      eventDateStart.setHours(0, 0, 0, 0);
+      if (eventDateStart < todayStart) {
+        return NextResponse.json({ error: "Booking date cannot be in the past" }, { status: 400 });
+      }
+    } else {
+      if (eventDate.getTime() < now.getTime() - 5 * 60 * 1000) {
+        return NextResponse.json({ error: "Booking date cannot be in the past" }, { status: 400 });
+      }
+    }
+
+    if (endDate <= eventDate) {
+      return NextResponse.json({ error: "End date must be after event start date" }, { status: 400 });
+    }
+
+    // Location Validation
+    const ALLOWED_LOCATIONS = [
+      "hodan",
+      "wadajir", "wadij",
+      "dharkiinleey", "dharkenley",
+      "wabari",
+      "xamar wayne", "xamar weyne",
+      "boondheer", "boondheere",
+      "kaaraan",
+      "kaxda",
+      "dayniile", "deynile",
+      "garasbaaleey", "garasbaley",
+      "cabdicasiis", "abdiaziz",
+      "gubadleey", "gubadley",
+      "shibi", "shibis",
+      "yaaqshiid", "yaqshid", "yaaqshid",
+      "hawlwadaag", "howlwadag"
+    ];
+    const locationLower = body.location?.trim().toLowerCase();
+    if (!locationLower || !ALLOWED_LOCATIONS.includes(locationLower)) {
+      return NextResponse.json({ error: "Invalid location. Please select one of the allowed locations." }, { status: 400 });
+    }
+
     const booking = await prisma.$transaction(async (tx) => {
       let totalPrice = 0;
       const bookingItemsData = [];
@@ -89,7 +137,6 @@ export async function POST(req: Request) {
       for (const item of body.items) {
         const decoration = await tx.decoration.findUnique({ where: { id: item.decorationId } });
         if (!decoration) {
-          // Throw a specific error to be caught later and responded with 400
           throw new Error(`DECORATION_NOT_FOUND:${item.decorationId}`);
         }
 
@@ -163,19 +210,50 @@ export async function POST(req: Request) {
         });
       }
 
-      return createdBooking;
+      // Create Database Notification
+      await tx.notification.create({
+        data: {
+          userId: session.id,
+          type: "BOOKING",
+          message: `Booking created successfully! Booking ID: #${createdBooking.id.slice(-6).toUpperCase()}. Total: $${totalPrice.toFixed(2)}, Paid: $${paymentAmount.toFixed(2)}, Balance: $${balance.toFixed(2)}. Event: ${eventDate.toDateString()} to ${endDate.toDateString()}.`,
+        }
+      });
+
+      // Fetch the full details to return
+      const finalBooking = await tx.booking.findUnique({
+        where: { id: createdBooking.id },
+        include: {
+          bookingItems: {
+            include: {
+              decoration: true
+            }
+          },
+          payments: true
+        }
+      });
+
+      return finalBooking;
     }, {
       maxWait: 15000,
       timeout: 30000,
     });
 
-    if (session.email) {
+    if (session.email && booking) {
       try {
-        const template = emailTemplates.bookingConfirmation(
-          booking.id,
-          booking.eventDate.toDateString(),
-          booking.totalPrice
-        );
+        const template = emailTemplates.bookingReport({
+          bookingId: booking.id,
+          eventDate: booking.eventDate.toDateString(),
+          endDate: booking.endDate.toDateString(),
+          location: booking.location,
+          totalPrice: booking.totalPrice,
+          paidAmount: booking.payments?.[0]?.amount || (booking.totalPrice - booking.balance),
+          balance: booking.balance,
+          items: booking.bookingItems.map((item: any) => ({
+            name: item.decoration?.name || "Decoration Item",
+            quantity: item.quantity,
+            price: item.price
+          }))
+        });
         await sendEmail({ to: session.email, ...template });
       } catch (emailError) {
         console.error('Failed to send booking confirmation email:', emailError);

@@ -28,6 +28,25 @@ function BookingForm() {
     items: [] as { decorationId: string; quantity: number }[],
   });
 
+  const todayStr = new Date().toISOString().split("T")[0];
+  const LOCATIONS = [
+    "Hodan",
+    "Wadajir",
+    "Dharkiinleey",
+    "Wabari",
+    "Xamar Wayne",
+    "Boondheer",
+    "Kaaraan",
+    "Kaxda",
+    "Dayniile",
+    "Garasbaaleey",
+    "Cabdicasiis",
+    "Gubadleey",
+    "Shibi",
+    "Yaaqshiid",
+    "Hawlwadaag"
+  ];
+
   useEffect(() => {
     fetch("/api/decorations")
       .then((res) => res.json())
@@ -113,6 +132,7 @@ function BookingForm() {
               <input
                 type="date"
                 required
+                min={todayStr}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500"
                 value={bookingData.eventDate}
                 onChange={(e) => setBookingData({ ...bookingData, eventDate: e.target.value })}
@@ -125,6 +145,7 @@ function BookingForm() {
               <input
                 type="date"
                 required
+                min={bookingData.eventDate || todayStr}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500"
                 value={bookingData.endDate}
                 onChange={(e) => setBookingData({ ...bookingData, endDate: e.target.value })}
@@ -134,14 +155,19 @@ function BookingForm() {
               <label className="flex items-center text-sm font-medium text-gray-700">
                 <MapPin className="w-4 h-4 mr-2" /> Venue Location
               </label>
-              <input
-                type="text"
+              <select
                 required
-                placeholder="e.g. Grand Ballroom, Hilton Hotel"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-white"
                 value={bookingData.location}
                 onChange={(e) => setBookingData({ ...bookingData, location: e.target.value })}
-              />
+              >
+                <option value="">Select a location</option>
+                {LOCATIONS.map((loc) => (
+                  <option key={loc} value={loc}>
+                    {loc}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

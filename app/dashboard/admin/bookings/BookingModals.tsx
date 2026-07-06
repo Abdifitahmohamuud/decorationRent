@@ -3,6 +3,24 @@
 import { useState, useEffect } from "react";
 import { X, Plus, Trash2, Calendar, MapPin, User, Package } from "lucide-react";
 
+const LOCATIONS = [
+  "Hodan",
+  "Wadajir",
+  "Dharkiinleey",
+  "Wabari",
+  "Xamar Wayne",
+  "Boondheer",
+  "Kaaraan",
+  "Kaxda",
+  "Dayniile",
+  "Garasbaaleey",
+  "Cabdicasiis",
+  "Gubadleey",
+  "Shibi",
+  "Yaaqshiid",
+  "Hawlwadaag"
+];
+
 export function CreateBookingModal({ onClose, onSuccess }: any) {
   const [users, setUsers] = useState<any[]>([]);
   const [decorations, setDecorations] = useState<any[]>([]);
@@ -86,6 +104,7 @@ export function CreateBookingModal({ onClose, onSuccess }: any) {
               <label className="text-xs font-extrabold text-gray-500 uppercase tracking-widest ml-1"><Calendar className="w-3 h-3 inline mr-1" />Event Date</label>
               <input 
                 required type="date"
+                min={new Date().toISOString().split("T")[0]}
                 className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500/20 font-medium text-gray-900"
                 value={formData.eventDate}
                 onChange={(e) => setFormData({...formData, eventDate: e.target.value})}
@@ -95,6 +114,7 @@ export function CreateBookingModal({ onClose, onSuccess }: any) {
               <label className="text-xs font-extrabold text-gray-500 uppercase tracking-widest ml-1"><Calendar className="w-3 h-3 inline mr-1" />Return Date</label>
               <input 
                 required type="date"
+                min={formData.eventDate || new Date().toISOString().split("T")[0]}
                 className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500/20 font-medium text-gray-900"
                 value={formData.endDate}
                 onChange={(e) => setFormData({...formData, endDate: e.target.value})}
@@ -104,12 +124,17 @@ export function CreateBookingModal({ onClose, onSuccess }: any) {
 
           <div className="space-y-2">
             <label className="text-xs font-extrabold text-gray-500 uppercase tracking-widest ml-1"><MapPin className="w-3 h-3 inline mr-1" />Location</label>
-            <input 
-              required type="text" placeholder="Event Location"
+            <select 
+              required
               className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500/20 font-medium text-gray-900"
               value={formData.location}
               onChange={(e) => setFormData({...formData, location: e.target.value})}
-            />
+            >
+              <option value="">Select Location...</option>
+              {LOCATIONS.map(loc => (
+                <option key={loc} value={loc}>{loc}</option>
+              ))}
+            </select>
           </div>
 
           <div className="space-y-4 pt-4 border-t border-gray-200">
@@ -205,6 +230,7 @@ export function EditBookingModal({ booking, onClose, onSuccess }: any) {
               <label className="text-xs font-extrabold text-gray-500 uppercase tracking-widest ml-1"><Calendar className="w-3 h-3 inline mr-1" />Event Date</label>
               <input 
                 required type="date"
+                min={new Date().toISOString().split("T")[0]}
                 className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500/20 font-medium text-gray-900"
                 value={formData.eventDate}
                 onChange={(e) => setFormData({...formData, eventDate: e.target.value})}
@@ -214,6 +240,7 @@ export function EditBookingModal({ booking, onClose, onSuccess }: any) {
               <label className="text-xs font-extrabold text-gray-500 uppercase tracking-widest ml-1"><Calendar className="w-3 h-3 inline mr-1" />Return Date</label>
               <input 
                 required type="date"
+                min={formData.eventDate || new Date().toISOString().split("T")[0]}
                 className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500/20 font-medium text-gray-900"
                 value={formData.endDate}
                 onChange={(e) => setFormData({...formData, endDate: e.target.value})}
@@ -223,12 +250,17 @@ export function EditBookingModal({ booking, onClose, onSuccess }: any) {
 
           <div className="space-y-2">
             <label className="text-xs font-extrabold text-gray-500 uppercase tracking-widest ml-1"><MapPin className="w-3 h-3 inline mr-1" />Location</label>
-            <input 
-              required type="text"
+            <select 
+              required
               className="w-full px-5 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500/20 font-medium text-gray-900"
               value={formData.location}
               onChange={(e) => setFormData({...formData, location: e.target.value})}
-            />
+            >
+              <option value="">Select Location...</option>
+              {LOCATIONS.map(loc => (
+                <option key={loc} value={loc}>{loc}</option>
+              ))}
+            </select>
           </div>
 
           <div className="space-y-2">

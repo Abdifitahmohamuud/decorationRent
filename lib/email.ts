@@ -101,6 +101,93 @@ export const emailTemplates = {
       `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/bookings`
     )
   }),
+  bookingReport: (data: {
+    bookingId: string;
+    eventDate: string;
+    endDate: string;
+    location: string;
+    totalPrice: number;
+    paidAmount: number;
+    balance: number;
+    items: Array<{ name: string; quantity: number; price: number }>;
+  }) => {
+    const itemsTable = data.items
+      .map(
+        (item) =>
+          `<tr>
+            <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px;">${item.name}</td>
+            <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; text-align: center;">${item.quantity}</td>
+            <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; text-align: right;">$${item.price.toFixed(2)}</td>
+            <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; text-align: right;">$${(item.price * item.quantity).toFixed(2)}</td>
+          </tr>`
+      )
+      .join("");
+
+    const messageHtml = `
+      <div style="margin-bottom: 24px;">
+        <p>Thank you for your booking! Below is your full booking and transaction report.</p>
+        <div style="background-color: #f8fafc; border-radius: 12px; padding: 16px; margin-bottom: 24px; border: 1px solid #e2e8f0;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <tr>
+              <td style="padding: 6px 0; color: #64748b; font-weight: bold;">Booking ID:</td>
+              <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #0f172a;">#${data.bookingId.slice(-6).toUpperCase()}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Event Dates:</td>
+              <td style="padding: 6px 0; text-align: right; color: #0f172a;">${data.eventDate} to ${data.endDate}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Location:</td>
+              <td style="padding: 6px 0; text-align: right; color: #0f172a;">${data.location}</td>
+            </tr>
+          </table>
+        </div>
+
+        <h3 style="font-size: 16px; margin-bottom: 12px; font-weight: 700; color: #0f172a;">Reserved Items</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+          <thead>
+            <tr style="background-color: #f1f5f9;">
+              <th style="padding: 12px; text-align: left; font-size: 12px; font-weight: bold; color: #64748b; text-transform: uppercase;">Item Name</th>
+              <th style="padding: 12px; text-align: center; font-size: 12px; font-weight: bold; color: #64748b; text-transform: uppercase;">Qty</th>
+              <th style="padding: 12px; text-align: right; font-size: 12px; font-weight: bold; color: #64748b; text-transform: uppercase;">Unit Price</th>
+              <th style="padding: 12px; text-align: right; font-size: 12px; font-weight: bold; color: #64748b; text-transform: uppercase;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsTable}
+          </tbody>
+        </table>
+
+        <div style="background-color: #f8fafc; border-radius: 12px; padding: 16px; border: 1px solid #e2e8f0;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;">Subtotal Price:</td>
+              <td style="padding: 6px 0; text-align: right; color: #0f172a; font-weight: bold;">$${data.totalPrice.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b; font-weight: bold;">Amount Paid Now:</td>
+              <td style="padding: 6px 0; text-align: right; color: #059669; font-weight: bold;">$${data.paidAmount.toFixed(2)}</td>
+            </tr>
+            <tr style="border-top: 1px solid #e2e8f0;">
+              <td style="padding: 12px 0 0 0; color: #64748b; font-weight: bold; font-size: 16px;">Remaining Balance:</td>
+              <td style="padding: 12px 0 0 0; text-align: right; color: #d97706; font-weight: bold; font-size: 16px;">$${data.balance.toFixed(2)}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    `;
+
+    return {
+      subject: `Booking & Transaction Report #${data.bookingId.slice(-6).toUpperCase()}`,
+      message: `Thank you for your booking! ID: #${data.bookingId.slice(-6).toUpperCase()}. Total: $${data.totalPrice.toFixed(2)}, Paid: $${data.paidAmount.toFixed(2)}, Balance: $${data.balance.toFixed(2)}.`,
+      html: generateEmailHtml(
+        "Booking Transaction Report",
+        messageHtml,
+        "View Booking Details",
+        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/bookings`
+      )
+    };
+  },
   paymentReceipt: (id: string, amount: number, balance: number) => ({
     subject: `Payment Received - Booking #${id.slice(-6).toUpperCase()}`,
     message: `We have received your payment of $${amount}. Your remaining balance is $${balance}.`,

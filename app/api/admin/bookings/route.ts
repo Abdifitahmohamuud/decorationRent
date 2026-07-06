@@ -72,8 +72,56 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    // Event Date Validations
+    const now = new Date();
+    let isDateOnly = false;
+    if (typeof eventDate === 'string' && !eventDate.includes(':') && !eventDate.includes('T')) {
+      isDateOnly = true;
+    }
+
     const eventDateObj = new Date(eventDate);
     const endDateObj = new Date(endDate);
+
+    if (isDateOnly) {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const eventDateStart = new Date(eventDateObj);
+      eventDateStart.setHours(0, 0, 0, 0);
+      if (eventDateStart < todayStart) {
+        return NextResponse.json({ error: "Booking date cannot be in the past" }, { status: 400 });
+      }
+    } else {
+      if (eventDateObj.getTime() < now.getTime() - 5 * 60 * 1000) {
+        return NextResponse.json({ error: "Booking date cannot be in the past" }, { status: 400 });
+      }
+    }
+
+    if (endDateObj <= eventDateObj) {
+      return NextResponse.json({ error: "End date must be after event start date" }, { status: 400 });
+    }
+
+    // Location Validation
+    const ALLOWED_LOCATIONS = [
+      "hodan",
+      "wadajir", "wadij",
+      "dharkiinleey", "dharkenley",
+      "wabari",
+      "xamar wayne", "xamar weyne",
+      "boondheer", "boondheere",
+      "kaaraan",
+      "kaxda",
+      "dayniile", "deynile",
+      "garasbaaleey", "garasbaley",
+      "cabdicasiis", "abdiaziz",
+      "gubadleey", "gubadley",
+      "shibi", "shibis",
+      "yaaqshiid", "yaqshid", "yaaqshid",
+      "hawlwadaag", "howlwadag"
+    ];
+    const locationLower = location?.trim().toLowerCase();
+    if (!locationLower || !ALLOWED_LOCATIONS.includes(locationLower)) {
+      return NextResponse.json({ error: "Invalid location. Please select one of the allowed locations." }, { status: 400 });
+    }
 
     const booking = await prisma.$transaction(async (tx : any) => {
       let totalPrice = 0;
@@ -157,8 +205,55 @@ export async function POST(req: Request) {
         });
       }
 
-      return createdBooking;
+      // Create Database Notification for customer
+      await tx.notification.create({
+        data: {
+          userId,
+          type: "BOOKING",
+          message: `Booking registered for you by administration. Booking ID: #${createdBooking.id.slice(-6).toUpperCase()}. Total: $${totalPrice.toFixed(2)}, Balance: $${balance.toFixed(2)}. Event: ${eventDateObj.toDateString()} to ${endDateObj.toDateString()}.`,
+        }
+      });
+
+      // Fetch the full details to return
+      const finalBooking = await tx.booking.findUnique({
+        where: { id: createdBooking.id },
+        include: {
+          bookingItems: {
+            include: {
+              decoration: true
+            }
+          },
+          payments: true,
+          user: true
+        }
+      });
+
+      return finalBooking;
     });
+
+    const emailTemplatesImport = require("@/lib/email");
+    const { sendEmail, emailTemplates } = emailTemplatesImport;
+    if (booking?.user?.email) {
+      try {
+        const template = emailTemplates.bookingReport({
+          bookingId: booking.id,
+          eventDate: booking.eventDate.toDateString(),
+          endDate: booking.endDate.toDateString(),
+          location: booking.location,
+          totalPrice: booking.totalPrice,
+          paidAmount: 0,
+          balance: booking.balance,
+          items: booking.bookingItems.map((item: any) => ({
+            name: item.decoration?.name || "Decoration Item",
+            quantity: item.quantity,
+            price: item.price
+          }))
+        });
+        await sendEmail({ to: booking.user.email, ...template });
+      } catch (emailError) {
+        console.error('Failed to send admin booking confirmation email:', emailError);
+      }
+    }
 
     return NextResponse.json(booking);
   } catch (error: any) {

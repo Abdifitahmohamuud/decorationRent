@@ -37,6 +37,15 @@ export async function POST(req: Request) {
         },
       });
 
+      // Create Database Notification for Payment
+      await tx.notification.create({
+        data: {
+          userId: session.id,
+          type: "PAYMENT",
+          message: `Payment received! Amount: $${body.amount.toFixed(2)} for Booking ID: #${body.bookingId.slice(-6).toUpperCase()}. Remaining balance: $${newBalance.toFixed(2)}.`,
+        }
+      });
+
       return createdPayment;
     }, {
       maxWait: 15000,

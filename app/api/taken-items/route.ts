@@ -88,6 +88,6 @@ export async function GET() {
 
     return NextResponse.json(formatted);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message ,messgae : "error 2"}, { status: 500 });
+    return NextResponse.json({ error: error.message, messgae: "error 2" }, { status: 500 });
   }
 }
