@@ -4,42 +4,41 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  //url = env("DATABASE_URL")
 }
 
 model User {
-  id             String         @id @default(uuid())
-  fullName       String
-  email          String         @unique
-  phone          String?        @unique
-  password       String
-  role           Role           @default(CUSTOMER)
-  isActive       Boolean        @default(true)
-  failedAttempts Int            @default(0)
-  lastLogin      DateTime?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id                   String                @id @default(uuid())
+  fullName             String
+  email                String                @unique
+  phone                String?               @unique
+  password             String
+  role                 Role                  @default(CUSTOMER)
+  isActive             Boolean               @default(true)
+  failedAttempts       Int                   @default(0)
+  lastLogin            DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
   auditLogs            AuditLog[]
   bookings             Booking[]
-  notifications        Notification[]
-  sessions             Session[]
-  returnedItems        ReturnedItem[]
   cancellationRequests CancellationRequest[]
+  notifications        Notification[]
+  returnedItems        ReturnedItem[]
+  sessions             Session[]
   takenItems           TakenItem[]
 }
 
 model Decoration {
-  id             String        @id @default(uuid())
+  id             String         @id @default(uuid())
   name           String
   description    String
   price          Float
-  priceUnitHours Float         @default(1)
+  priceUnitHours Float          @default(1)
   totalQty       Int
   availableQty   Int
-  isActive       Boolean       @default(true)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  image          String?   // optional legacy image data
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  image          String?
   category       String         @default("General")
   bookingItems   BookingItem[]
   returnedItems  ReturnedItem[]
@@ -47,25 +46,25 @@ model Decoration {
 }
 
 model Booking {
-  id           String        @id @default(uuid())
-  userId       String
-  eventDate    DateTime
-  endDate      DateTime
-  location     String
-  status       BookingStatus @default(REQUEST)
-  phoneNumber  String?   // optional – store payer mobile number
-  totalPrice   Float
-  deposit      Float
-  balance      Float
-  isLocked     Boolean       @default(false)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  user         User          @relation(fields: [userId], references: [id])
+  id            String         @id @default(uuid())
+  userId        String
+  eventDate     DateTime
+  endDate       DateTime
+  location      String
+  status        BookingStatus  @default(REQUEST)
+  totalPrice    Float
+  deposit       Float
+  balance       Float
+  isLocked      Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  phoneNumber   String?
+  user          User           @relation(fields: [userId], references: [id])
   bookingItems  BookingItem[]
   payments      Payment[]
+  refunds       Refund[]
   returnedItems ReturnedItem[]
   takenItems    TakenItem[]
-  refunds       Refund[]
 }
 
 model BookingItem {
@@ -79,32 +78,29 @@ model BookingItem {
 }
 
 model Payment {
-  id            String        @id @default(uuid())
-  bookingId     String
-  amount        Float
-  method        PaymentMethod
-  transactionId String        @unique
-  status        PaymentStatus @default(PENDING)
-  phoneNumber   String?   // optional – store payer mobile number
-  referenceId            String?
-  responseCode           String?
-  responseMessage        String?
-  rawPaymentResponse     Json?
-
-  // Refund tracking fields
-  refundTransactionId    String?
-  refundReferenceId      String?
-  refundReason           String?
-  refundDate             DateTime?
-  refundResponseCode     String?
-  refundResponseMessage  String?
-  rawWaafiResponse       Json?
-  lastRefundAttempt      DateTime?
-  refundCount            Int            @default(0)
-
-  createdAt     DateTime      @default(now())
-  booking       Booking       @relation(fields: [bookingId], references: [id])
-  refunds       Refund[]
+  id                    String        @id @default(uuid())
+  bookingId             String
+  amount                Float
+  method                PaymentMethod
+  transactionId         String        @unique
+  status                PaymentStatus @default(PENDING)
+  createdAt             DateTime      @default(now())
+  phoneNumber           String?
+  lastRefundAttempt     DateTime?
+  rawPaymentResponse    Json?
+  rawWaafiResponse      Json?
+  referenceId           String?
+  refundCount           Int           @default(0)
+  refundDate            DateTime?
+  refundReason          String?
+  refundReferenceId     String?
+  refundResponseCode    String?
+  refundResponseMessage String?
+  refundTransactionId   String?
+  responseCode          String?
+  responseMessage       String?
+  booking               Booking       @relation(fields: [bookingId], references: [id])
+  refunds               Refund?
 }
 
 model Notification {
@@ -137,6 +133,84 @@ model Session {
   expiresAt DateTime
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model Otp {
+  id        String   @id @default(uuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email, code])
+}
+
+model ReturnedItem {
+  id           String             @id @default(uuid())
+  bookingId    String
+  decorationId String
+  userId       String
+  quantity     Int
+  status       ReturnedItemStatus @default(OK)
+  remarks      String?
+  returnedAt   DateTime           @default(now())
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  booking      Booking            @relation(fields: [bookingId], references: [id])
+  decoration   Decoration         @relation(fields: [decorationId], references: [id])
+  user         User               @relation(fields: [userId], references: [id])
+}
+
+model CancellationRequest {
+  id                String             @id @default(uuid())
+  originalBookingId String             @unique
+  userId            String
+  userName          String
+  bookingData       Json
+  status            CancellationStatus @default(PENDING)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  user              User               @relation(fields: [userId], references: [id])
+}
+
+model TakenItem {
+  id           String     @id @default(uuid())
+  bookingId    String
+  decorationId String
+  userId       String
+  quantity     Int
+  remarks      String?
+  takenAt      DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  booking      Booking    @relation(fields: [bookingId], references: [id])
+  decoration   Decoration @relation(fields: [decorationId], references: [id])
+  user         User       @relation(fields: [userId], references: [id])
+}
+
+model Refund {
+  id                    String       @id @default(uuid())
+  paymentId             String       @unique
+  bookingId             String
+  originalTransactionId String
+  refundTransactionId   String?
+  referenceId           String?
+  amount                Float
+  originalAmount        Float?
+  reason                String
+  status                RefundStatus
+  responseCode          String
+  responseMessage       String
+  state                 String?
+  requestedBy           String
+  requestedAt           DateTime     @default(now())
+  completedAt           DateTime?
+  customerName          String?
+  customerPhone         String?
+  rawRequest            Json?
+  rawResponse           Json
+  booking               Booking      @relation(fields: [bookingId], references: [id])
+  payment               Payment      @relation(fields: [paymentId], references: [id])
 }
 
 enum Role {
@@ -178,49 +252,9 @@ enum NotificationType {
   REMINDER
 }
 
-model Otp {
-  id        String   @id @default(uuid())
-  email     String
-  code      String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-
-  @@index([email, code])
-}
-
-model ReturnedItem {
-  id           String             @id @default(uuid())
-  bookingId    String
-  decorationId String
-  userId       String             // The person who returned it
-  quantity     Int
-  status       ReturnedItemStatus @default(OK)
-  remarks      String?
-  returnedAt   DateTime           @default(now())
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-
-  booking      Booking    @relation(fields: [bookingId], references: [id])
-  decoration   Decoration @relation(fields: [decorationId], references: [id])
-  user         User       @relation(fields: [userId], references: [id])
-}
-
 enum ReturnedItemStatus {
   OK
   DAMAGED
-}
-
-model CancellationRequest {
-  id                String             @id @default(uuid())
-  originalBookingId String             @unique
-  userId            String
-  userName          String
-  bookingData       Json
-  status            CancellationStatus @default(PENDING)
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-
-  user              User               @relation(fields: [userId], references: [id])
 }
 
 enum CancellationStatus {
@@ -230,50 +264,7 @@ enum CancellationStatus {
   REJECTED
 }
 
-model TakenItem {
-  id           String    @id @default(uuid())
-  bookingId    String
-  decorationId String
-  userId       String    // The staff/admin who recorded it
-  quantity     Int
-  remarks      String?
-  takenAt      DateTime  @default(now())
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  booking      Booking    @relation(fields: [bookingId], references: [id])
-  decoration   Decoration @relation(fields: [decorationId], references: [id])
-  user         User       @relation(fields: [userId], references: [id])
-}
-
 enum RefundStatus {
   SUCCESS
   FAILED
-}
-
-model Refund {
-  id                    String        @id @default(uuid())
-  paymentId             String @unique
-  bookingId             String
-  originalTransactionId String
-  refundTransactionId   String?
-  referenceId           String?
-  amount                Float
-  originalAmount        Float?
-  reason                String
-  status                RefundStatus
-  responseCode          String
-  responseMessage       String
-  state                 String?
-  requestedBy           String        // admin user ID
-  requestedAt           DateTime      @default(now())
-  completedAt           DateTime?
-  customerName          String?
-  customerPhone         String?
-  rawRequest            Json?
-  rawResponse           Json
-
-  // Relations
-  payment               Payment @relation(fields: [paymentId], references: [id])
-  booking               Booking @relation(fields: [bookingId], references: [id])
 }
