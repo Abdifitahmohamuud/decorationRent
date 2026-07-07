@@ -253,7 +253,7 @@ enum RefundStatus {
 
 model Refund {
   id                    String        @id @default(uuid())
-  paymentId             String
+  paymentId             String @unique
   bookingId             String
   originalTransactionId String
   refundTransactionId   String?
