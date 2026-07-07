@@ -53,6 +53,7 @@ model Booking {
   endDate      DateTime
   location     String
   status       BookingStatus @default(REQUEST)
+  phoneNumber  String?   // optional – store payer mobile number
   totalPrice   Float
   deposit      Float
   balance      Float
@@ -64,6 +65,7 @@ model Booking {
   payments      Payment[]
   returnedItems ReturnedItem[]
   takenItems    TakenItem[]
+  refunds       Refund[]
 }
 
 model BookingItem {
@@ -83,9 +85,26 @@ model Payment {
   method        PaymentMethod
   transactionId String        @unique
   status        PaymentStatus @default(PENDING)
-  paidAt        DateTime?
+  phoneNumber   String?   // optional – store payer mobile number
+  referenceId            String?
+  responseCode           String?
+  responseMessage        String?
+  rawPaymentResponse     Json?
+
+  // Refund tracking fields
+  refundTransactionId    String?
+  refundReferenceId      String?
+  refundReason           String?
+  refundDate             DateTime?
+  refundResponseCode     String?
+  refundResponseMessage  String?
+  rawWaafiResponse       Json?
+  lastRefundAttempt      DateTime?
+  refundCount            Int            @default(0)
+
   createdAt     DateTime      @default(now())
   booking       Booking       @relation(fields: [bookingId], references: [id])
+  refunds       Refund[]
 }
 
 model Notification {
@@ -207,6 +226,8 @@ model CancellationRequest {
 enum CancellationStatus {
   PENDING
   SUCCESS_CANCELED
+  REFUND_FAILED
+  REJECTED
 }
 
 model TakenItem {
@@ -223,4 +244,36 @@ model TakenItem {
   booking      Booking    @relation(fields: [bookingId], references: [id])
   decoration   Decoration @relation(fields: [decorationId], references: [id])
   user         User       @relation(fields: [userId], references: [id])
+}
+
+enum RefundStatus {
+  SUCCESS
+  FAILED
+}
+
+model Refund {
+  id                    String        @id @default(uuid())
+  paymentId             String
+  bookingId             String
+  originalTransactionId String
+  refundTransactionId   String?
+  referenceId           String?
+  amount                Float
+  originalAmount        Float?
+  reason                String
+  status                RefundStatus
+  responseCode          String
+  responseMessage       String
+  state                 String?
+  requestedBy           String        // admin user ID
+  requestedAt           DateTime      @default(now())
+  completedAt           DateTime?
+  customerName          String?
+  customerPhone         String?
+  rawRequest            Json?
+  rawResponse           Json
+
+  // Relations
+  payment               Payment @relation(fields: [paymentId], references: [id])
+  booking               Booking @relation(fields: [bookingId], references: [id])
 }

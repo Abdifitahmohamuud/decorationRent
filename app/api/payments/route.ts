@@ -23,7 +23,6 @@ export async function POST(req: Request) {
           method: body.method,
           transactionId: body.transactionId,
           status: "SUCCESS",
-          paidAt: new Date(),
         },
       });
 

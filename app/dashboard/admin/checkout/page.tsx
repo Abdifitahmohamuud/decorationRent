@@ -17,6 +17,7 @@ export default function AdminCheckoutPage() {
   const [bookings, setBookings] = useState<PendingBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
+  const [payerPhone, setPayerPhone] = useState<string>('');
   const [methods, setMethods] = useState<Record<string, string>>({});
 
   const fetchPending = async () => {
@@ -39,8 +40,36 @@ export default function AdminCheckoutPage() {
   const handleComplete = async (bookingId: string) => {
     if (!confirm("Are you sure you want to mark this balance as paid and complete the booking?")) return;
     setProcessing(bookingId);
-    
     try {
+      // Find the booking to get phone & balance
+      const booking = bookings.find(b => b.id === bookingId);
+      if (!booking) throw new Error("Booking not found");
+      if (!payerPhone) throw new Error("Payer phone number is required");
+
+      // ---- WaafiPay purchase ----
+      const waafiRes = await fetch('/api/waafi/purchase', {
+        method: 'POST',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountNo: payerPhone,
+          amount: booking.balance,
+          currency: "USD",
+          referenceId: booking.id,
+          bookingId: booking.id,
+        })
+      });
+      const waafiData = await waafiRes.json();
+    if (!waafiRes.ok || !waafiData.success) {
+      const state = (waafiData.state ?? '').toUpperCase();
+      let errMsg = waafiData.message || "WaafiPay purchase failed";
+      if (state === 'REJECTED') errMsg = "Payment rejected by customer.";
+      else if (state === 'CANCELLED') errMsg = "Payment cancelled.";
+      else if (state === 'TIMEOUT') errMsg = "Payment request timed out.";
+      else if (state === 'FAILED') errMsg = waafiData.message || "Payment failed.";
+      throw new Error(errMsg);
+    }
+
+      // ---- Existing admin checkout ----
       const selectedMethod = methods[bookingId] || "LOCAL_EVC";
       const res = await fetch("/api/admin/checkout", {
         method: "POST",
@@ -49,18 +78,15 @@ export default function AdminCheckoutPage() {
       });
 
       if (!res.ok) {
-        let errMessage = "Failed to process checkout";
-        try {
-          const errData = await res.json();
-          errMessage = errData.error || errData.message || errMessage;
-        } catch(e) {}
+        const errData = await res.json();
+        const errMessage = errData.error || errData.message || "Failed to complete checkout";
         throw new Error(errMessage);
       }
       
       toast.success("Payment collected! Booking marked as COMPLETED.");
       fetchPending();
-    } catch (err) {
-      toast.error("Checkout failed");
+    } catch (err: any) {
+      toast.error(err.message || "Checkout failed");
     } finally {
       setProcessing(null);
     }
@@ -70,6 +96,17 @@ export default function AdminCheckoutPage() {
 
   return (
     <div className="p-8 lg:p-12 space-y-8">
+      {/* Phone Number Input */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Payer Mobile Number</label>
+        <input
+          type="text"
+          placeholder="Enter mobile number (e.g., 252611111111)"
+          value={payerPhone}
+          onChange={(e) => setPayerPhone(e.target.value)}
+          className="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+      </div>
       <header>
         <h1 className="text-3xl font-extrabold text-gray-900 flex items-center">
           <DollarSign className="w-8 h-8 mr-3 text-indigo-600" />

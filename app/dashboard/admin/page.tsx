@@ -30,6 +30,12 @@ interface Stats {
   totalBookings: number;
   activeRentals: number;
   totalRevenue: number;
+  totalRefunds: number;
+  todaysRefunds: number;
+  pendingRefunds: number;
+  failedRefunds: number;
+  refundAmount: number;
+  refundRate: number;
 }
 
 interface Booking {
@@ -127,6 +133,52 @@ export default function AdminDashboard() {
           trendUp={true}
           color="bg-blue-500"
         />
+      </div>
+
+      {/* Refund Analytics Section */}
+      <div className="space-y-6">
+        <div className="border-b border-gray-100 pb-2">
+          <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">Refund Analytics</h2>
+          <p className="text-xs text-gray-500">Overview of client payment reversals, failed operations, and refund velocity.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+          <StatCard 
+            title="Total Refunds" 
+            value={stats?.totalRefunds ?? 0} 
+            icon={<CheckCircle2 className="w-6 h-6" />}
+            color="bg-emerald-500"
+          />
+          <StatCard 
+            title="Today's Refunds" 
+            value={stats?.todaysRefunds ?? 0} 
+            icon={<Clock className="w-6 h-6" />}
+            color="bg-blue-500"
+          />
+          <StatCard 
+            title="Pending Refunds" 
+            value={stats?.pendingRefunds ?? 0} 
+            icon={<Clock className="w-6 h-6" />}
+            color="bg-amber-500"
+          />
+          <StatCard 
+            title="Failed Refunds" 
+            value={stats?.failedRefunds ?? 0} 
+            icon={<XCircle className="w-6 h-6" />}
+            color="bg-rose-500"
+          />
+          <StatCard 
+            title="Refund Amount" 
+            value={`$${(stats?.refundAmount ?? 0).toLocaleString()}`} 
+            icon={<DollarSign className="w-6 h-6" />}
+            color="bg-violet-500"
+          />
+          <StatCard 
+            title="Refund Rate" 
+            value={`${(stats?.refundRate ?? 0).toFixed(1)}%`} 
+            icon={<TrendingUp className="w-6 h-6" />}
+            color="bg-indigo-500"
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -269,10 +321,12 @@ function StatCard({ title, value, icon, trend, trendUp, color }: any) {
         <div className={`w-12 h-12 rounded-2xl ${color} flex items-center justify-center text-white shadow-lg shadow-indigo-200/20`}>
           {icon}
         </div>
-        <div className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs font-bold ${trendUp ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-          {trendUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-          <span>{trend}</span>
-        </div>
+        {trend && (
+          <div className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs font-bold ${trendUp ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+            {trendUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+            <span>{trend}</span>
+          </div>
+        )}
       </div>
       <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-1">{title}</p>
       <h3 className="text-2xl font-extrabold text-gray-900">{value}</h3>

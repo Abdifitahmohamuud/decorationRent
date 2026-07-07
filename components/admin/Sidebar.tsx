@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, Package, Calendar, DollarSign,
-  LogOut, Sparkles, Bell, Shield, LogIn, ClipboardList, Wallet, CreditCard, Clock, XCircle, RotateCcw, Truck
+  LogOut, Sparkles, Bell, Shield, LogIn, ClipboardList, Wallet, CreditCard, Clock, XCircle, RotateCcw, Truck, CornerUpLeft
 } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ const menuGroups = [
       { icon: RotateCcw,       label: "Returned Items", href: "/dashboard/admin/returned-items" },
       { icon: Calendar,        label: "Bookings",       href: "/dashboard/admin/bookings" },
       { icon: XCircle,         label: "Cancellations",  href: "/dashboard/admin/cancellations" },
+      { icon: CornerUpLeft,    label: "Refund History", href: "/dashboard/admin/refunds" },
       { icon: Clock,           label: "Booking History", href: "/dashboard/admin/bookings/history" },
       { icon: ClipboardList,   label: "Booking Items",  href: "/dashboard/admin/booking-items" },
       { icon: Users,           label: "Users",          href: "/dashboard/admin/users" },

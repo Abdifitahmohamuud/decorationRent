@@ -75,7 +75,44 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
       include: { user: true }
     });
-    return NextResponse.json(requests);
+
+    const bookingIds = requests.map(r => r.originalBookingId);
+    const bookings = await prisma.booking.findMany({
+      where: { id: { in: bookingIds } },
+      include: {
+        payments: true,
+        bookingItems: {
+          include: {
+            decoration: true
+          }
+        }
+      }
+    });
+
+    const bookingsMap = new Map(bookings.map(b => [b.id, b]));
+
+    const responseData = requests.map(req => {
+      const booking = bookingsMap.get(req.originalBookingId) || null;
+      return {
+        ...req,
+        booking: booking ? {
+          id: booking.id,
+          status: booking.status,
+          totalPrice: booking.totalPrice,
+          deposit: booking.deposit,
+          balance: booking.balance,
+          bookingItems: booking.bookingItems,
+          payments: booking.payments.map(p => ({
+            id: p.id,
+            status: p.status,
+            amount: p.amount,
+            transactionId: p.transactionId,
+          })),
+        } : null
+      };
+    });
+
+    return NextResponse.json(responseData);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

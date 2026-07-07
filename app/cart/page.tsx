@@ -48,6 +48,7 @@ export default function CartPage() {
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("LOCAL_EVC");
   const [customPayment, setCustomPayment] = useState<string>("");
+  const [phoneNumber, setPhoneNumber] = useState<string>("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -97,22 +98,56 @@ export default function CartPage() {
        toast.error(`Payment cannot exceed the total price of $${dynamicTotalPrice}`);
        return;
     }
+    // Validate phone number format (digits only, 10-20 chars, no leading + or 0)
+    const phoneRegex = /^[1-9]\d{9,19}$/;
+    if (!phoneNumber) {
+      toast.error("Please enter a mobile number for payment");
+      return;
+    }
+    if (!phoneRegex.test(phoneNumber)) {
+      toast.error("Phone number must be in international format without + or leading zero (e.g., 252611111111)");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...bookingData,
-          paymentAmount: actualPaymentAmount,
-          paymentMethod,
-          items: cartItems.map((item) => ({
-            decorationId: item.decorationId,
-            quantity: item.quantity,
-          })),
-        }),
-      });
+      const trimmedPhone = phoneNumber.trim();
+      const paymentRes = await fetch('/api/waafi/purchase', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accountNo: trimmedPhone,
+            amount: Math.round(actualPaymentAmount * 100) / 100,
+            currency: 'USD',
+            referenceId: `CART-${Date.now()}`,
+            // No bookingId yet
+          }),
+        });
+
+        const waafiData = await paymentRes.json();
+        if (!paymentRes.ok || !waafiData.success) {
+          // Use detailed message based on Waafi state if available
+          const errMsg = waafiData.message || "Payment failed";
+          toast.error(errMsg);
+          setIsSubmitting(false);
+          return;
+        }
+
+      const res = await fetch('/api/bookings', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           ...bookingData,
+           paymentAmount: actualPaymentAmount,
+           paymentMethod,
+           transactionId: waafiData.transactionId,
+           phoneNumber,
+           items: cartItems.map((item) => ({
+             decorationId: item.decorationId,
+             quantity: item.quantity,
+           })),
+         }),
+       });
 
       if (!res.ok) {
         let errorMsg = "Failed to process booking";
@@ -125,6 +160,7 @@ export default function CartPage() {
         return;
       }
 
+      toast.success("Payment completed successfully.");
       clearCart();
       router.push(`/bookings/success`);
     } catch (err) {
@@ -154,6 +190,17 @@ export default function CartPage() {
     <div className="max-w-6xl mx-auto px-4 py-12">
       <h1 className="text-3xl font-bold text-gray-900 mb-8">Checkout & Payment</h1>
       
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Payer Mobile Number</label>
+        <input
+          type="text"
+          placeholder="Enter mobile number (e.g., 252611111111)"
+          value={phoneNumber}
+          onChange={(e)=>setPhoneNumber(e.target.value)}
+          className="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+      </div>
+
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6">

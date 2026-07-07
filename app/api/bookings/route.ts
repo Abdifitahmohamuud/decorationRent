@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+
 import { BookingStatus } from "@prisma/client";
 import { getServerSession } from "@/lib/auth-helper";
 import { sendEmail, emailTemplates } from "@/lib/email";
@@ -190,18 +191,30 @@ export async function POST(req: Request) {
         },
       });
 
-      if (paymentAmount > 0 && body.paymentMethod) {
-         await tx.payment.create({
-           data: {
-             bookingId: createdBooking.id,
-             amount: paymentAmount,
-             method: body.paymentMethod,
-             transactionId: `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-             status: "SUCCESS",
-             paidAt: new Date(),
-           }
-         });
-      }
+        if (paymentAmount > 0 && body.paymentMethod) {
+          // Record payment and update booking atomically
+          await tx.payment.create({
+  data: {
+    bookingId: createdBooking.id,
+    amount: paymentAmount,
+    method: "MOBILE_MONEY",
+    status: "SUCCESS",
+    transactionId: body.transactionId ?? "",
+    ...(body.phoneNumber ? { phoneNumber: body.phoneNumber } : {}),
+  } as any,
+});
+
+          // Update booking balance, lock, and store phone number
+          await tx.booking.update({
+            where: { id: createdBooking.id },
+            data: {
+              balance: { decrement: paymentAmount },
+              isLocked: true,
+              ...(body.phoneNumber ? { phoneNumber: body.phoneNumber } : {}),
+            } as any,
+
+          });
+        }
 
       for (const item of body.items) {
         await tx.decoration.update({

@@ -48,7 +48,8 @@ export async function POST(req: Request) {
           method: method as any, // Cast to any to bypass generated type lag, or use raw
           transactionId: `ADMIN-TXN-${Date.now()}`,
           status: PaymentStatus.SUCCESS,
-          paidAt: new Date()
+          // paidAt field removed; Prisma schema does not have this column
+
         }
       });
 

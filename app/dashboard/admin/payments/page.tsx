@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { 
   DollarSign, 
   Search, 
-  Filter, 
   ArrowUpRight, 
   ArrowDownRight, 
   CreditCard, 
@@ -15,7 +14,9 @@ import {
   FileText,
   Download,
   Calendar,
-  MoreHorizontal
+  MoreHorizontal,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 
 interface Payment {
@@ -29,6 +30,13 @@ interface Payment {
   booking: {
     user: { fullName: string; email: string };
   };
+  refundTransactionId?: string | null;
+  refundReferenceId?: string | null;
+  refundReason?: string | null;
+  refundDate?: string | null;
+  refundResponseCode?: string | null;
+  refundResponseMessage?: string | null;
+  refundCount?: number;
 }
 
 export default function PaymentTracking() {
@@ -36,6 +44,7 @@ export default function PaymentTracking() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [search, setSearch] = useState("");
+  const [expandedPaymentId, setExpandedPaymentId] = useState<string | null>(null);
 
   const fetchPayments = async () => {
     const params = new URLSearchParams({
@@ -49,6 +58,7 @@ export default function PaymentTracking() {
 
   useEffect(() => {
     fetchPayments();
+    setExpandedPaymentId(null);
   }, [statusFilter]);
 
   const filteredPayments = payments.filter((p) => {
@@ -73,6 +83,10 @@ export default function PaymentTracking() {
   const pendingRevenue = payments
     .filter(p => p.status === "PENDING")
     .reduce((sum, p) => sum + p.amount, 0);
+
+  const toggleExpand = (id: string) => {
+    setExpandedPaymentId(expandedPaymentId === id ? null : id);
+  };
 
   return (
     <div className="p-8 lg:p-12 space-y-8">
@@ -102,6 +116,7 @@ export default function PaymentTracking() {
             <option value="SUCCESS">Success</option>
             <option value="PENDING">Pending</option>
             <option value="FAILED">Failed</option>
+            <option value="REFUNDED">Refunded</option>
           </select>
         </div>
       </header>
@@ -160,50 +175,144 @@ export default function PaymentTracking() {
                   <td colSpan={6} className="px-8 py-12 text-center text-gray-500 animate-pulse">Loading transactions...</td>
                 </tr>
               ) : filteredPayments.map((payment) => (
-                <tr key={payment.id} className="group hover:bg-gray-50/50 transition">
-                  <td className="px-8 py-6">
-                    <div className="flex items-center space-x-3">
-                       <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-500 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition">
-                         <FileText className="w-5 h-5" />
-                       </div>
-                       <div>
-                         <p className="text-sm font-bold text-gray-900 leading-none mb-1">{payment.transactionId}</p>
-                         <div className="flex items-center text-[10px] text-gray-500 font-bold uppercase tracking-widest">
-                           <Calendar className="w-3 h-3 mr-1" />
-                           {new Date(payment.createdAt).toLocaleDateString()}
+                <>
+                  <tr key={payment.id} className="group hover:bg-gray-50/50 transition">
+                    <td className="px-8 py-6">
+                      <div className="flex items-center space-x-3">
+                         <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-500 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition">
+                           <FileText className="w-5 h-5" />
                          </div>
-                       </div>
-                    </div>
-                  </td>
-                  <td className="px-8 py-6">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-xs">
-                        {payment.booking.user.fullName[0]}
+                         <div>
+                           <p className="text-sm font-bold text-gray-900 leading-none mb-1">{payment.transactionId}</p>
+                           <div className="flex items-center text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                             <Calendar className="w-3 h-3 mr-1" />
+                             {new Date(payment.createdAt).toLocaleDateString()}
+                           </div>
+                         </div>
                       </div>
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-gray-700">{payment.booking.user.fullName}</span>
-                        <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest text-ellipsis overflow-hidden">BK: {payment.bookingId}</span>
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-xs">
+                          {payment.booking.user.fullName[0]}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-gray-700">{payment.booking.user.fullName}</span>
+                          <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest text-ellipsis overflow-hidden">BK: {payment.bookingId}</span>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-8 py-6">
-                    <span className="font-extrabold text-gray-900">${payment.amount.toLocaleString()}</span>
-                  </td>
-                  <td className="px-8 py-6">
-                    <span className="flex items-center text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1.5 rounded-xl w-max">
-                      {payment.method.startsWith("GLOBAL") ? <CreditCard className="w-4 h-4" /> : <Smartphone className="w-4 h-4" />}
-                      <span className="ml-2">{payment.method.replace("LOCAL_", "").replace("GLOBAL_", "")}</span>
-                    </span>
-                  </td>
-                  <td className="px-8 py-6">
-                    <StatusChip status={payment.status} />
-                  </td>
-                  <td className="px-8 py-6 text-right">
-                    <button className="text-gray-300 hover:text-indigo-600 transition">
-                      <MoreHorizontal className="w-5 h-5" />
-                    </button>
-                  </td>
-                </tr>
+                    </td>
+                    <td className="px-8 py-6">
+                      <span className="font-extrabold text-gray-900">${payment.amount.toLocaleString()}</span>
+                    </td>
+                    <td className="px-8 py-6">
+                      <span className="flex items-center text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1.5 rounded-xl w-max">
+                        {payment.method.startsWith("GLOBAL") ? <CreditCard className="w-4 h-4" /> : <Smartphone className="w-4 h-4" />}
+                        <span className="ml-2">{payment.method.replace("LOCAL_", "").replace("GLOBAL_", "")}</span>
+                      </span>
+                    </td>
+                    <td className="px-8 py-6">
+                      <StatusChip status={payment.status} />
+                    </td>
+                    <td className="px-8 py-6 text-right">
+                      <button 
+                        onClick={() => toggleExpand(payment.id)}
+                        className="text-gray-400 hover:text-indigo-600 transition flex items-center space-x-1 font-bold text-xs"
+                      >
+                        {expandedPaymentId === payment.id ? (
+                          <>
+                            <span>Hide</span>
+                            <ChevronUp className="w-4 h-4" />
+                          </>
+                        ) : (
+                          <>
+                            <span>Details</span>
+                            <ChevronDown className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+                    </td>
+                  </tr>
+
+                  {expandedPaymentId === payment.id && (
+                    <tr className="bg-indigo-50/20">
+                      <td colSpan={6} className="px-8 py-6 border-t border-b border-indigo-100/30">
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-extrabold text-xs text-indigo-600 uppercase tracking-widest">Transaction Audit Metadata</h4>
+                            {payment.status === "REFUNDED" && (
+                              <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px] font-bold">REVERSED</span>
+                            )}
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-2xl border border-gray-100">
+                            {payment.status === "REFUNDED" ? (
+                              <>
+                                <div className="space-y-1">
+                                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Refund Date</span>
+                                  <span className="font-bold text-gray-800 text-sm">
+                                    {payment.refundDate ? new Date(payment.refundDate).toLocaleString() : "N/A"}
+                                  </span>
+                                </div>
+                                <div className="space-y-1">
+                                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Refund Transaction ID</span>
+                                  <span className="font-mono text-gray-800 text-xs font-bold bg-gray-50 px-2 py-1 rounded">
+                                    {payment.refundTransactionId || "N/A"}
+                                  </span>
+                                </div>
+                                <div className="space-y-1 md:col-span-2">
+                                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Refund Reason</span>
+                                  <span className="font-medium text-gray-700 text-sm italic">
+                                    "{payment.refundReason || "No reason provided"}"
+                                  </span>
+                                </div>
+                                <div className="space-y-1">
+                                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Refund Reference ID</span>
+                                  <span className="font-mono text-gray-800 text-xs bg-gray-50 px-2 py-1 rounded">
+                                    {payment.refundReferenceId || "N/A"}
+                                  </span>
+                                </div>
+                                <div className="space-y-1">
+                                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Refund Response Code</span>
+                                  <span className="font-bold text-gray-800 text-sm">
+                                    {payment.refundResponseCode || "N/A"} - {payment.refundResponseMessage || ""}
+                                  </span>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="space-y-1">
+                                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Original Reference ID</span>
+                                  <span className="font-mono text-gray-800 text-xs bg-gray-50 px-2 py-1 rounded">
+                                    {payment.refundReferenceId || payment.id}
+                                  </span>
+                                </div>
+                                <div className="space-y-1">
+                                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Last Refund Attempt</span>
+                                  <span className="font-medium text-gray-800 text-sm">
+                                    {payment.lastRefundAttempt ? new Date(payment.lastRefundAttempt).toLocaleString() : "Never attempted"}
+                                  </span>
+                                </div>
+                                <div className="space-y-1">
+                                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Refund Count</span>
+                                  <span className="font-bold text-gray-800 text-sm">
+                                    {payment.refundCount || 0}
+                                  </span>
+                                </div>
+                                <div className="space-y-1">
+                                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status Status</span>
+                                  <span className="font-semibold text-gray-800 text-sm uppercase">
+                                    {payment.status}
+                                  </span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
               ))}
             </tbody>
           </table>
@@ -218,6 +327,7 @@ function StatusChip({ status }: { status: string }) {
     SUCCESS: { icon: <CheckCircle2 className="w-3 h-3" />, class: "bg-emerald-50 text-emerald-600 border-emerald-100" },
     PENDING: { icon: <Clock className="w-3 h-3" />, class: "bg-amber-50 text-amber-600 border-amber-100" },
     FAILED: { icon: <XCircle className="w-3 h-3" />, class: "bg-rose-50 text-rose-600 border-rose-100" },
+    REFUNDED: { icon: <ArrowDownRight className="w-3 h-3" />, class: "bg-blue-50 text-blue-600 border-blue-100" },
   };
   const config = configs[status] || configs.PENDING;
   

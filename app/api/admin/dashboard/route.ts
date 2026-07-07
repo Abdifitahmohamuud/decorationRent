@@ -22,6 +22,47 @@ export async function GET() {
       _sum: { amount: true },
     });
 
+    // Refund Analytics
+    const totalRefunds = await prisma.refund.count({
+      where: { status: "SUCCESS" }
+    });
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const todaysRefunds = await prisma.refund.count({
+      where: {
+        status: "SUCCESS",
+        requestedAt: { gte: startOfToday }
+      }
+    });
+
+    const pendingRequests = await prisma.cancellationRequest.findMany({
+      where: { status: "PENDING" },
+      select: { originalBookingId: true }
+    });
+    const pendingBookingIds = pendingRequests.map(r => r.originalBookingId);
+    const pendingRefunds = await prisma.payment.count({
+      where: {
+        bookingId: { in: pendingBookingIds },
+        status: "SUCCESS"
+      }
+    });
+
+    const failedRefunds = await prisma.refund.count({
+      where: { status: "FAILED" }
+    });
+
+    const refundAmountAgg = await prisma.refund.aggregate({
+      where: { status: "SUCCESS" },
+      _sum: { amount: true }
+    });
+    const refundAmount = refundAmountAgg._sum.amount || 0;
+
+    const successfulPaymentsCount = await prisma.payment.count({
+      where: { status: "SUCCESS" }
+    });
+    const refundRate = (totalRefunds / ((successfulPaymentsCount + totalRefunds) || 1)) * 100;
+
     // Calculate analytics for the last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -35,8 +76,6 @@ export async function GET() {
       orderBy: { createdAt: "asc" }
     });
 
-    // Grouping manually to handle date formatting
-    // Grouping manually to handle date formatting
     const dailyData: Record<string, number> = {};
     for (let i = 0; i < revenueByDay.length; i++) {
       const p = revenueByDay[i];
@@ -61,13 +100,18 @@ export async function GET() {
       include: { user: true },
     });
 
-
     return NextResponse.json({
       stats: {
         totalUsers,
         totalBookings,
         activeRentals,
         totalRevenue: totalRevenue._sum.amount || 0,
+        totalRefunds,
+        todaysRefunds,
+        pendingRefunds,
+        failedRefunds,
+        refundAmount,
+        refundRate,
       },
       recentBookings,
       chartData
@@ -76,4 +120,3 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-
