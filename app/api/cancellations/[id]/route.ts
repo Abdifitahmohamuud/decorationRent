@@ -154,7 +154,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
                     state,
                     requestedBy: session.id,
                     completedAt: new Date(),
-                    customerName: cancelReq.user.name ?? "Customer",
+                    customerName: cancelReq.userName ?? "Customer",
                     customerPhone: payment.phoneNumber || null,
                     rawRequest: { transactionId: payment.transactionId, description: reason },
                     rawResponse: waafiResp ? JSON.parse(JSON.stringify(waafiResp)) : null,
