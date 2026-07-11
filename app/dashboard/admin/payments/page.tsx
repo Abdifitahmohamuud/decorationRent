@@ -37,6 +37,7 @@ interface Payment {
   refundResponseCode?: string | null;
   refundResponseMessage?: string | null;
   refundCount?: number;
+  lastRefundAttempt?: string | null;
 }
 
 export default function PaymentTracking() {
