@@ -6,6 +6,7 @@ export async function GET() {
   try {
     const decorations = await prisma.decoration.findMany({
       where: { isActive: true },
+       
       orderBy: { createdAt: "desc" },
     });
 
