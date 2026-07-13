@@ -24,10 +24,7 @@ export const storeSuccessfulPayment = async ({
   rawPaymentResponse?: any;
 }) => {
   // Ensure the booking exists before recording payment
-  const existingBooking = await tx.booking.findUnique({ where: { id: bookingId } });
-  if (!existingBooking) {
-    throw new Error(`Booking with id ${bookingId} not found`);
-  }
+  
   return await prisma.$transaction(async (tx) => {
     // Create payment record
     const payment = await tx.payment.create({
@@ -80,7 +77,7 @@ export const recordFailedPayment = async ({
   waafiResponse: any;
 }) => {
   // Verify booking exists before recording failed payment
-  const existingBooking = await tx.booking.findUnique({ where: { id: bookingId } });
+  const existingBooking = await prisma.booking.findUnique({ where: { id: bookingId } });
   if (!existingBooking) {
     throw new Error(`Booking with id ${bookingId} not found`);
   }

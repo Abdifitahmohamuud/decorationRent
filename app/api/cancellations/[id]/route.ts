@@ -73,12 +73,25 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             continue;
           }
 
+          // Ensure the payment has a transactionId before attempting a reversal
+          if (!payment.transactionId) {
+            // No transactionId means we cannot call WaafiPay; assume it was already processed or not needed
+            console.warn(`[REFUND] No transactionId for payment ${payment.id}. Skipping WaafiPay call and marking as already refunded.`);
+            refundInfos.push({ payment, alreadyRefunded: true, reason: "Missing transactionId", waafiResp: null });
+            continue;
+          }
           console.log(`[REFUND] Initiating WaafiPay Reversal for booking ${bookingId}, payment ${payment.id}, original tx ${payment.transactionId}`);
           let waafiResp;
           try {
             waafiResp = await waafiRefund(payment.transactionId, reason);
             console.log("[REFUND] WaafiPay raw response:", waafiResp);
           } catch (waafiErr: any) {
+            // If WaafiPay reports missing transactionId, treat as already refunded
+            if (waafiErr instanceof Error && waafiErr.message.includes('Original transactionId is required')) {
+              console.warn(`[REFUND] WaafiPay rejected due to missing transactionId for payment ${payment.id}. Marking as already refunded.`);
+              refundInfos.push({ payment, alreadyRefunded: true, reason: waafiErr.message, waafiResp: null });
+              continue;
+            }
             console.error("[REFUND] WaafiPay Reversal call failed with error:", waafiErr);
             return NextResponse.json({ success: false, refundStatus: "FAILED", reason: waafiErr.message || "Failed to connect to WaafiPay", raw: waafiErr }, { status: 502 });
           }
