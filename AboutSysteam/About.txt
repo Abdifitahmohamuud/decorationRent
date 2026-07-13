@@ -1,0 +1,352 @@
+# Comprehensive System Documentation
+
+## Goal
+Create a detailed description of the **decoration‑rental** system covering:
+1. Overall architecture and how the web backend and mobile app interact.
+2. Technology stack (frameworks, languages, databases, tooling).
+3. Folder structure of the repository and of the mobile‑app (if present).
+4. Communication flow between web and mobile (API contracts, auth, shared models).
+5. List of all routes/end‑points (Next.js API routes) with HTTP method, request body schema, response schema and example URLs.
+6. Important files/folders and their responsibilities.
+7. Feature overview.
+
+## System Overview
+The **decoration‑rental** project is a full‑stack application consisting of a Next.js web frontend/backend and a separate mobile application (React Native) located under `decorationRent/mobileApp`. The web portion serves both the public site and an API consumed by the mobile client.
+
+### Technology Stack
+- **Web (Next.js)**:  TypeScript, Tailwind (or vanilla CSS), Next.js API routes.
+- **Backend**:NExt js same , i use as backend + frontend  Prisma ORM, PostgreSQL (or MySQL), server‑side logic in `app/api`.
+- **Authentication**: NextAuth.js with JWT session strategy (custom provider if any).
+- **Mobile**: flutter in `decorationRent/mobileApp`, communicates via the same REST API.
+- **DevOps**: PNPM workspaces, Docker for containerisation, Vercel/Netlify for deployment.
+
+## Folder Structure
+```
+decoration-rental/
+├─ app/                 # Next.js app (pages, API routes, components)
+│   ├─ api/            # REST endpoints
+│   ├─ auth/           # Auth utilities
+│   ├─ dashboard/      # Admin dashboard UI
+│   ├─ decorations/    # Decoration catalogue UI
+│   ├─ globals.css
+│   └─ layout.tsx
+├─ prisma/              # Prisma schema and migrations
+├─ public/              # Static assets (images, icons)
+├─ scripts/             # Helper scripts (e.g., seed, lint)
+├─ server/              # Optional custom server code
+└─ AboutSysteam/
+    └─ About.txt       # <--- This documentation file
+```
+*The mobile app resides in `decorationRent/mobileApp` (outside this repo).*
+
+## API Endpoints Overview
+| Method | Route | Description | Request Body | Response |
+|--------|-------|-------------|--------------|----------|
+| GET | `/api/decorations` | List all decorations | - | `{ decorations: Decoration[] }` |
+| POST | `/api/decorations` | Create a new decoration (admin) | `{ name, price, images, description }` | `{ success: true, decoration: Decoration }` |
+| GET | `/api/decorations/[id]` | Get details of a decoration | - | `{ decoration: Decoration }` |
+| PUT | `/api/decorations/[id]` | Update a decoration (admin) | `{ name?, price?, images?, description? }` | `{ success: true, decoration: Decoration }` |
+| DELETE | `/api/decorations/[id]` | Delete a decoration (admin) | - | `{ success: true }` |
+| POST | `/api/bookings` | Create a booking | `{ decorationId, startDate, endDate, userId }` | `{ booking: Booking, paymentUrl: string }` |
+| GET | `/api/bookings/[id]` | Retrieve a booking | - | `{ booking: Booking }` |
+| POST | `/api/auth/login` | User login | `{ email, password }` | `{ token, user }` |
+| POST | `/api/auth/register` | Register new user | `{ name, email, password }` | `{ user, token }` |
+| GET | `/api/profile` | Get current user profile (auth required) | - | `{ user }` |
+*Add more routes as they exist in `app/api`. Adjust request/response schemas accordingly.*
+
+## Important Files & Their Roles
+- `app/api/**` – Serverless API route handlers.
+- `prisma/schema.prisma` – Database schema definitions.
+- `next.config.ts` – Next.js configuration (rewrites, env variables).
+- `package.json` – Project dependencies and scripts.
+- `README.md` – High‑level project overview and setup instructions.
+
+## Feature Overview
+- **Decoration Catalogue** – Browse, search, and filter decorations.
+- **Booking System** – Reserve decorations for specific dates, integrated with payment gateway.
+- **User Authentication** – Sign‑up, login, JWT protected routes.
+- **Admin Dashboard** – Manage decorations, bookings, users, and view analytics.
+- **Responsive Design** – Works on desktop, tablet, and mobile browsers.
+- **Mobile App Sync** – Mobile client uses the same API for booking and browsing.
+
+## Communication Between Web & Mobile
+Both the web frontend and the flutter mobile app consume the same REST API under `/api/*`. Authentication is token‑based (JWT) and stored securely on the client. The API enforces role‑based access (user vs admin) using middleware defined in `app/auth/middleware.ts`.
+
+---
+
+*If any sections need more detail or if the mobile app resides elsewhere, please let me know so I can adjust the documentation.*
+
+
+*schema*
+
+ generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                   String                @id @default(uuid())
+  fullName             String
+  email                String                @unique
+  phone                String?               @unique
+  password             String
+  role                 Role                  @default(CUSTOMER)
+  isActive             Boolean               @default(true)
+  failedAttempts       Int                   @default(0)
+  lastLogin            DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  auditLogs            AuditLog[]
+  bookings             Booking[]
+  cancellationRequests CancellationRequest[]
+  notifications        Notification[]
+  returnedItems        ReturnedItem[]
+  sessions             Session[]
+  takenItems           TakenItem[]
+}
+
+model Decoration {
+  id             String         @id @default(uuid())
+  name           String
+  description    String
+  price          Float
+  priceUnitHours Float          @default(1)
+  totalQty       Int
+  availableQty   Int
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  image          String?
+  category       String         @default("General")
+  bookingItems   BookingItem[]
+  returnedItems  ReturnedItem[]
+  takenItems     TakenItem[]
+}
+
+model Booking {
+  id            String         @id @default(uuid())
+  userId        String
+  eventDate     DateTime
+  endDate       DateTime
+  location      String
+  status        BookingStatus  @default(REQUEST)
+  totalPrice    Float
+  deposit       Float
+  balance       Float
+  isLocked      Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  phoneNumber   String?
+  user          User           @relation(fields: [userId], references: [id])
+  bookingItems  BookingItem[]
+  payments      Payment[]
+  refunds       Refund[]
+  returnedItems ReturnedItem[]
+  takenItems    TakenItem[]
+}
+
+model BookingItem {
+  id           String     @id @default(uuid())
+  bookingId    String
+  decorationId String
+  quantity     Int
+  price        Float
+  booking      Booking    @relation(fields: [bookingId], references: [id])
+  decoration   Decoration @relation(fields: [decorationId], references: [id])
+}
+
+model Payment {
+  id                    String        @id @default(uuid())
+  bookingId             String
+  amount                Float
+  method                PaymentMethod
+  transactionId         String        @unique
+  status                PaymentStatus @default(PENDING)
+  createdAt             DateTime      @default(now())
+  phoneNumber           String?
+  lastRefundAttempt     DateTime?
+  rawPaymentResponse    Json?
+  rawWaafiResponse      Json?
+  referenceId           String?
+  refundCount           Int           @default(0)
+  refundDate            DateTime?
+  refundReason          String?
+  refundReferenceId     String?
+  refundResponseCode    String?
+  refundResponseMessage String?
+  refundTransactionId   String?
+  responseCode          String?
+  responseMessage       String?
+  booking               Booking       @relation(fields: [bookingId], references: [id])
+  refunds               Refund?
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  sentEmail Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Otp {
+  id        String   @id @default(uuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email, code])
+}
+
+model ReturnedItem {
+  id           String             @id @default(uuid())
+  bookingId    String
+  decorationId String
+  userId       String
+  quantity     Int
+  status       ReturnedItemStatus @default(OK)
+  remarks      String?
+  returnedAt   DateTime           @default(now())
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  booking      Booking            @relation(fields: [bookingId], references: [id])
+  decoration   Decoration         @relation(fields: [decorationId], references: [id])
+  user         User               @relation(fields: [userId], references: [id])
+}
+
+model CancellationRequest {
+  id                String             @id @default(uuid())
+  originalBookingId String             @unique
+  userId            String
+  userName          String
+  bookingData       Json
+  status            CancellationStatus @default(PENDING)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  user              User               @relation(fields: [userId], references: [id])
+}
+
+model TakenItem {
+  id           String     @id @default(uuid())
+  bookingId    String
+  decorationId String
+  userId       String
+  quantity     Int
+  remarks      String?
+  takenAt      DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  booking      Booking    @relation(fields: [bookingId], references: [id])
+  decoration   Decoration @relation(fields: [decorationId], references: [id])
+  user         User       @relation(fields: [userId], references: [id])
+}
+
+model Refund {
+  id                    String       @id @default(uuid())
+  paymentId             String       @unique
+  bookingId             String
+  originalTransactionId String
+  refundTransactionId   String?
+  referenceId           String?
+  amount                Float
+  originalAmount        Float?
+  reason                String
+  status                RefundStatus
+  responseCode          String
+  responseMessage       String
+  state                 String?
+  requestedBy           String
+  requestedAt           DateTime     @default(now())
+  completedAt           DateTime?
+  customerName          String?
+  customerPhone         String?
+  rawRequest            Json?
+  rawResponse           Json
+  booking               Booking      @relation(fields: [bookingId], references: [id])
+  payment               Payment      @relation(fields: [paymentId], references: [id])
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+  STAFF
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  REQUEST
+  TAKEN
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  LOCAL_EVC
+  LOCAL_EDAHAB
+  LOCAL_SAHAL
+  LOCAL_PREMIER_WALLET
+  GLOBAL_MASTERCARD
+  GLOBAL_PAYPAL
+  MOBILE_MONEY
+  CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum NotificationType {
+  BOOKING
+  PAYMENT
+  REMINDER
+}
+
+enum ReturnedItemStatus {
+  OK
+  DAMAGED
+}
+
+enum CancellationStatus {
+  PENDING
+  SUCCESS_CANCELED
+  REFUND_FAILED
+  REJECTED
+}
+
+enum RefundStatus {
+  SUCCESS
+  FAILED
+}
+ 
