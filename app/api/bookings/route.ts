@@ -191,30 +191,10 @@ export async function POST(req: Request) {
         },
       });
 
-        if (paymentAmount > 0 && body.paymentMethod) {
-          // Record payment and update booking atomically
-          await tx.payment.create({
-  data: {
-    bookingId: createdBooking.id,
-    amount: paymentAmount,
-    method: "MOBILE_MONEY",
-    status: "SUCCESS",
-    transactionId: body.transactionId ?? "",
-    ...(body.phoneNumber ? { phoneNumber: body.phoneNumber } : {}),
-  } as any,
-});
+      // NOTE: Payment is NOT recorded here. It will be recorded by /api/waafi/purchase
+      // after WaafiPay confirms the transaction. This prevents duplicate payment records
+      // and the 'Unique constraint failed on transactionId' error.
 
-          // Update booking balance, lock, and store phone number
-          await tx.booking.update({
-            where: { id: createdBooking.id },
-            data: {
-              balance: { decrement: paymentAmount },
-              isLocked: true,
-              ...(body.phoneNumber ? { phoneNumber: body.phoneNumber } : {}),
-            } as any,
-
-          });
-        }
 
       for (const item of body.items) {
         await tx.decoration.update({

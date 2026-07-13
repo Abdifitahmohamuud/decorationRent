@@ -24,11 +24,15 @@ export const storeSuccessfulPayment = async ({
   responseMessage?: string;
   rawPaymentResponse?: any;
 }) => {
-  // Ensure the booking exists before recording payment
-  
   return await prisma.$transaction(async (tx) => {
+    // Ensure the booking exists before recording payment
+    const existingBooking = await tx.booking.findUnique({ where: { id: bookingId } });
+    if (!existingBooking) {
+      throw new Error(`Booking with id ${bookingId} not found`);
+    }
     // Create payment record
     const payment = await tx.payment.create({
+
       data: {
         bookingId,
         amount,
