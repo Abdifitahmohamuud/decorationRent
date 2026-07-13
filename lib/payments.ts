@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { randomUUID } from 'crypto';
 
 /**
  * Stores a successful WaafiPay payment and updates the related booking.
@@ -32,7 +33,7 @@ export const storeSuccessfulPayment = async ({
         bookingId,
         amount,
         method: "MOBILE_MONEY",
-        transactionId,
+        transactionId: transactionId || `SUCCESS-${randomUUID()}`,
         status: "SUCCESS",
         phoneNumber,
         referenceId,
@@ -88,7 +89,7 @@ export const recordFailedPayment = async ({
         bookingId,
         amount,
         method: "MOBILE_MONEY",
-        transactionId,
+        transactionId: transactionId || `FAILED-${randomUUID()}`,
         status: "FAILED",
         phoneNumber,
         // Optionally store raw response for debugging if schema supports
