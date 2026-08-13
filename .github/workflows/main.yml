@@ -16,10 +16,17 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
-      - name: Install pnpm
-        run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '11.21.0'
+
+      - name: Verify Node.js and pnpm
+        run: |
+          node -v
+          pnpm -v
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
@@ -31,4 +38,5 @@ jobs:
         run: pnpm build
 
       - name: Restart application
-        run: pm2 restart decoration-rent || pm2 start pnpm --name decoration-rent -- start
+        run: |
+          pm2 restart decoration-rent || pm2 start pnpm --name decoration-rent -- start
