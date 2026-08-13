@@ -1,0 +1,29 @@
+name: Deploy to Contabo
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm prisma generate
+
+      - name: Build Next.js
+        run: pnpm build
+
+      - name: Restart application
+        run: pm2 restart decoration-rent || pm2 start pnpm --name decoration-rent -- start
