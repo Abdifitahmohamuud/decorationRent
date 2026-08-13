@@ -28,6 +28,12 @@ jobs:
           node -v
           pnpm -v
 
+      - name: Create .env file
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+        run: |
+          printf '%s\n' "$ENV_FILE" > .env
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
