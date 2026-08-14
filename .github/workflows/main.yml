@@ -33,6 +33,8 @@ jobs:
           ENV_FILE: ${{ secrets.ENV_FILE }}
         run: |
           printf '%s\n' "$ENV_FILE" > .env
+          echo "NEXTAUTH_URL=http://169.58.170.104" >> .env
+          echo "AUTH_TRUST_HOST=true" >> .env
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
@@ -45,4 +47,5 @@ jobs:
 
       - name: Restart application
         run: |
-          pm2 restart decoration-rent || pm2 start pnpm --name decoration-rent -- start
+          pm2 restart decoration-rent || pm2 start node_modules/next/dist/bin/next --name "decoration-rent" -- start
+          pm2 save
