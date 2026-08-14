@@ -60,8 +60,8 @@ export default function CartPage() {
 
   const dynamicTotalPrice = useMemo(() => {
     if (durationHours === 0) {
-       // if no dates selected, just show base price (1 unit block)
-       return cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+      // if no dates selected, just show base price (1 unit block)
+      return cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     }
     return cartItems.reduce((acc, item) => {
       const priceUnit = (item as any).priceUnitHours || 1;
@@ -71,7 +71,7 @@ export default function CartPage() {
   }, [cartItems, durationHours]);
 
   const depositRequired = Math.round((dynamicTotalPrice * 0.20) * 100) / 100;
-  
+
   // if customPayment is empty, default to deposit. Otherwise use user input
   const actualPaymentAmount = customPayment !== "" ? Number(customPayment) : depositRequired;
 
@@ -89,14 +89,14 @@ export default function CartPage() {
       toast.error("Please enter valid event dates.");
       return;
     }
-    
+
     if (actualPaymentAmount < depositRequired - 0.1) {
-       toast.error(`Minimum payment required is $${depositRequired}`);
-       return;
+      toast.error(`Minimum payment required is $${depositRequired}`);
+      return;
     }
     if (actualPaymentAmount > dynamicTotalPrice + 0.1) {
-       toast.error(`Payment cannot exceed the total price of $${dynamicTotalPrice}`);
-       return;
+      toast.error(`Payment cannot exceed the total price of $${dynamicTotalPrice}`);
+      return;
     }
     // Validate phone number format (digits only, 10-20 chars, no leading + or 0)
     const phoneRegex = /^[1-9]\d{9,19}$/;
@@ -113,48 +113,48 @@ export default function CartPage() {
     try {
       const trimmedPhone = phoneNumber.trim();
       const paymentRes = await fetch('/api/waafi/purchase', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            accountNo: trimmedPhone,
-            amount: Math.round(actualPaymentAmount * 100) / 100,
-            currency: 'USD',
-            referenceId: `CART-${Date.now()}`,
-            // No bookingId yet
-          }),
-        });
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountNo: trimmedPhone,
+          amount: Math.round(actualPaymentAmount * 100) / 100,
+          currency: 'USD',
+          referenceId: `CART-${Date.now()}`,
+          // No bookingId yet
+        }),
+      });
 
-        const waafiData = await paymentRes.json();
-        if (!paymentRes.ok || !waafiData.success) {
-          // Use detailed message based on Waafi state if available
-          const errMsg = waafiData.message || "Payment failed";
-          toast.error(errMsg);
-          setIsSubmitting(false);
-          return;
-        }
+      const waafiData = await paymentRes.json();
+      if (!paymentRes.ok || !waafiData.success) {
+        // Use detailed message based on Waafi state if available
+        const errMsg = waafiData.message || "Payment failed";
+        toast.error(errMsg);
+        setIsSubmitting(false);
+        return;
+      }
 
       const res = await fetch('/api/bookings', {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({
-           ...bookingData,
-           paymentAmount: actualPaymentAmount,
-           paymentMethod,
-           transactionId: waafiData.transactionId,
-           phoneNumber,
-           items: cartItems.map((item) => ({
-             decorationId: item.decorationId,
-             quantity: item.quantity,
-           })),
-         }),
-       });
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...bookingData,
+          paymentAmount: actualPaymentAmount,
+          paymentMethod,
+          transactionId: waafiData.transactionId,
+          phoneNumber,
+          items: cartItems.map((item) => ({
+            decorationId: item.decorationId,
+            quantity: item.quantity,
+          })),
+        }),
+      });
 
       if (!res.ok) {
         let errorMsg = "Failed to process booking";
         try {
           const data = await res.json();
           errorMsg = data.error || errorMsg;
-        } catch (e) {}
+        } catch (e) { }
         toast.error(errorMsg);
         setIsSubmitting(false);
         return;
@@ -189,14 +189,14 @@ export default function CartPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
       <h1 className="text-3xl font-bold text-gray-900 mb-8">Checkout & Payment</h1>
-      
+
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">Payer Mobile Number</label>
         <input
           type="text"
           placeholder="Enter mobile number (e.g., 252611111111)"
           value={phoneNumber}
-          onChange={(e)=>setPhoneNumber(e.target.value)}
+          onChange={(e) => setPhoneNumber(e.target.value)}
           className="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
       </div>
@@ -215,9 +215,9 @@ export default function CartPage() {
                     <h3 className="font-bold text-gray-900">{item.name}</h3>
                     <p className="text-sm text-gray-500">${item.price} / {(item as any).priceUnitHours === 1 ? 'hr' : `${(item as any).priceUnitHours || 1} hrs`}</p>
                   </div>
-                  
+
                   <div className="flex items-center gap-4 bg-white px-3 py-2 rounded-xl border border-gray-200">
-                    <button 
+                    <button
                       type="button"
                       onClick={() => updateQuantity(item.decorationId, item.quantity - 1)}
                       className="text-gray-500 hover:text-indigo-600 p-1"
@@ -225,7 +225,7 @@ export default function CartPage() {
                       <Minus className="w-4 h-4" />
                     </button>
                     <span className="w-8 text-center font-bold text-gray-900">{item.quantity}</span>
-                    <button 
+                    <button
                       type="button"
                       onClick={() => updateQuantity(item.decorationId, item.quantity + 1)}
                       className="text-gray-500 hover:text-indigo-600 p-1"
@@ -235,12 +235,12 @@ export default function CartPage() {
                   </div>
 
                   <div className="font-bold text-gray-900 w-24 text-right">
-                    ${(durationHours > 0 
-                      ? item.price * Math.ceil(durationHours / ((item as any).priceUnitHours || 1)) * item.quantity 
+                    ${(durationHours > 0
+                      ? item.price * Math.ceil(durationHours / ((item as any).priceUnitHours || 1)) * item.quantity
                       : item.price * item.quantity).toFixed(2)}
                   </div>
 
-                  <button 
+                  <button
                     type="button"
                     onClick={() => removeFromCart(item.decorationId)}
                     className="text-red-400 hover:text-red-600 p-2"
@@ -306,43 +306,37 @@ export default function CartPage() {
               <DollarSign className="w-5 h-5 mr-2 text-emerald-600" />
               Payment Details
             </h2>
-            
+
             <div className="space-y-6">
               <div className="grid sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">Payment Amount ($)</label>
                   <p className="text-xs text-gray-500 mb-2">You can pay any amount from the minimum deposit up to the total price.</p>
                   <input
-                     type="number"
-                     step="0.01"
-                     min={depositRequired}
-                     max={dynamicTotalPrice}
-                     placeholder={depositRequired.toString()}
-                     value={customPayment}
-                     onChange={(e) => setCustomPayment(e.target.value)}
-                     className="w-full px-4 py-3 font-extrabold text-indigo-700 bg-indigo-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500"
+                    type="number"
+                    step="0.01"
+                    min={depositRequired}
+                    max={dynamicTotalPrice}
+                    placeholder={depositRequired.toString()}
+                    value={customPayment}
+                    onChange={(e) => setCustomPayment(e.target.value)}
+                    className="w-full px-4 py-3 font-extrabold text-indigo-700 bg-indigo-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500"
                   />
                   {durationHours > 0 && <p className="text-[10px] font-bold text-gray-400">Min: ${depositRequired.toFixed(2)} | Max: ${dynamicTotalPrice.toFixed(2)}</p>}
                 </div>
-                
+
                 <div className="space-y-2">
-                   <label className="text-sm font-medium text-gray-700">Payment Method</label>
-                   <select 
-                     className="w-full px-4 py-3 font-bold text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500"
-                     value={paymentMethod}
-                     onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                   >
-                     <optgroup label="Local Mobile Money">
-                        <option value="LOCAL_EVC">EVC Plus</option>
-                        <option value="LOCAL_EDAHAB">eDahab</option>
-                        <option value="LOCAL_SAHAL">Sahal</option>
-                        <option value="LOCAL_PREMIER_WALLET">Premier Wallet</option>
-                     </optgroup>
-                     <optgroup label="Global Cards">
-                        <option value="GLOBAL_MASTERCARD">Mastercard</option>
-                        <option value="GLOBAL_PAYPAL">PayPal</option>
-                     </optgroup>
-                   </select>
+                  <label className="text-sm font-medium text-gray-700">Payment Method</label>
+                  <select
+                    className="w-full px-4 py-3 font-bold text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                  >
+                    <optgroup label="Local Mobile Money">
+                      <option value="LOCAL_EVC">EVC Plus</option>
+
+                    </optgroup>
+                  </select>
                 </div>
               </div>
             </div>
@@ -380,7 +374,7 @@ export default function CartPage() {
                 <CheckCircle className="w-3 h-3 mr-1" /> Payment securely processed via your selection
               </p>
             </div>
-            
+
             <button
               form="checkout-form"
               type="submit"
