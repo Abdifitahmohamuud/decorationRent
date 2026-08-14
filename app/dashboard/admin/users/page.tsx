@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  Users, 
-  Search, 
-  Filter, 
-  MoreHorizontal, 
-  Shield, 
-  User as UserIcon, 
-  Trash2, 
-  CheckCircle, 
+import {
+  Users,
+  Search,
+  Filter,
+  MoreHorizontal,
+  Shield,
+  User as UserIcon,
+  Trash2,
+  CheckCircle,
   XCircle,
   Mail,
   Calendar,
@@ -88,17 +88,17 @@ export default function UserManagement() {
         </div>
         <div className="flex items-center space-x-3 bg-white p-2 rounded-2xl shadow-sm border border-gray-200">
           <div className="relative">
-             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-             <input 
-               type="text" 
-               placeholder="Search by name or email..." 
-               className="pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 w-64"
-               value={search}
-               onChange={(e) => setSearch(e.target.value)}
-             />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Search by name or email..."
+              className="pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 w-64"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
           <div className="h-8 w-px bg-gray-100 mx-2" />
-          <select 
+          <select
             className="bg-gray-50 border-none rounded-xl text-sm font-bold px-4 py-2 text-gray-600 focus:ring-0"
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
@@ -106,10 +106,10 @@ export default function UserManagement() {
             <option value="ALL">All Roles</option>
             <option value="ADMIN">Admin</option>
             <option value="CUSTOMER">Customer</option>
-            <option value="STAFF">Staff</option>
+            {/* <option value="STAFF">Staff</option> */}
           </select>
           <div className="h-8 w-px bg-gray-100 mx-2 hidden md:block" />
-          <button 
+          <button
             onClick={() => setIsCreateModalOpen(true)}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition flex items-center shadow-lg shadow-indigo-100"
           >
@@ -157,13 +157,12 @@ export default function UserManagement() {
                     <RoleBadge role={user.role} onUpdate={(role) => changeRole(user, role)} />
                   </td>
                   <td className="px-8 py-6">
-                    <button 
+                    <button
                       onClick={() => toggleStatus(user)}
-                      className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest border transition ${
-                        user.isActive 
-                        ? "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100" 
+                      className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest border transition ${user.isActive
+                        ? "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100"
                         : "bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200"
-                      }`}
+                        }`}
                     >
                       {user.isActive ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
                       <span>{user.isActive ? "Active" : "Disabled"}</span>
@@ -180,20 +179,23 @@ export default function UserManagement() {
                   </td>
                   <td className="px-8 py-6 text-right">
                     <div className="flex items-center justify-end space-x-2">
-                       <button 
-                         onClick={() => deleteUser(user.id)}
-                         className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                         title="Delete User"
-                       >
-                         <Trash2 className="w-5 h-5" />
-                       </button>
-                       <button 
-                         onClick={() => setEditingUser(user)}
-                         className="p-2 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
-                         title="Edit User"
-                       >
-                         <MoreHorizontal className="w-5 h-5" />
-                       </button>
+                      {/* Delete button hidden for ADMIN users — admins can only be edited/updated */}
+                      {user.role !== "ADMIN" && (
+                        <button
+                          onClick={() => deleteUser(user.id)}
+                          className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                          title="Delete User"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setEditingUser(user)}
+                        className="p-2 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                        title="Edit User"
+                      >
+                        <MoreHorizontal className="w-5 h-5" />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -202,15 +204,15 @@ export default function UserManagement() {
           </table>
         </div>
       </div>
-      
+
       {isCreateModalOpen && (
-        <CreateUserModal 
+        <CreateUserModal
           onClose={() => setIsCreateModalOpen(false)}
           onSuccess={() => { setIsCreateModalOpen(false); fetchUsers(); }}
         />
       )}
       {editingUser && (
-        <EditUserModal 
+        <EditUserModal
           user={editingUser}
           onClose={() => setEditingUser(null)}
           onSuccess={() => { setEditingUser(null); fetchUsers(); }}
@@ -230,7 +232,7 @@ function RoleBadge({ role, onUpdate }: { role: string; onUpdate: (role: string) 
 
   if (isEditing) {
     return (
-      <select 
+      <select
         autoFocus
         className="text-[10px] font-bold rounded-lg border-gray-200 py-1"
         value={role}
@@ -248,7 +250,7 @@ function RoleBadge({ role, onUpdate }: { role: string; onUpdate: (role: string) 
   }
 
   return (
-    <button 
+    <button
       onClick={() => setIsEditing(true)}
       className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest shadow-sm hover:ring-2 hover:ring-offset-1 ring-indigo-500/20 transition ${configs[role]}`}
     >

@@ -11,6 +11,7 @@ interface PendingBooking {
   deposit: number;
   balance: number;
   status: string;
+  createdAt: string; // needed to sort by most recent first
 }
 
 export default function AdminCheckoutPage() {
@@ -24,8 +25,14 @@ export default function AdminCheckoutPage() {
     try {
       const res = await fetch("/api/admin/checkout");
       if (!res.ok) throw new Error("Failed to fetch");
-      const data = await res.json();
-      setBookings(data);
+      const data: PendingBooking[] = await res.json();
+
+      // Sort so the most recently created booking shows first (newest -> oldest)
+      const sorted = [...data].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+
+      setBookings(sorted);
     } catch (err) {
       toast.error("Could not load pending payments");
     } finally {
@@ -59,15 +66,15 @@ export default function AdminCheckoutPage() {
         })
       });
       const waafiData = await waafiRes.json();
-    if (!waafiRes.ok || !waafiData.success) {
-      const state = (waafiData.state ?? '').toUpperCase();
-      let errMsg = waafiData.message || "WaafiPay purchase failed";
-      if (state === 'REJECTED') errMsg = "Payment rejected by customer.";
-      else if (state === 'CANCELLED') errMsg = "Payment cancelled.";
-      else if (state === 'TIMEOUT') errMsg = "Payment request timed out.";
-      else if (state === 'FAILED') errMsg = waafiData.message || "Payment failed.";
-      throw new Error(errMsg);
-    }
+      if (!waafiRes.ok || !waafiData.success) {
+        const state = (waafiData.state ?? '').toUpperCase();
+        let errMsg = waafiData.message || "WaafiPay purchase failed";
+        if (state === 'REJECTED') errMsg = "Payment rejected by customer.";
+        else if (state === 'CANCELLED') errMsg = "Payment cancelled.";
+        else if (state === 'TIMEOUT') errMsg = "Payment request timed out.";
+        else if (state === 'FAILED') errMsg = waafiData.message || "Payment failed.";
+        throw new Error(errMsg);
+      }
 
       // ---- Existing admin checkout ----
       const selectedMethod = methods[bookingId] || "LOCAL_EVC";
@@ -82,7 +89,7 @@ export default function AdminCheckoutPage() {
         const errMessage = errData.error || errData.message || "Failed to complete checkout";
         throw new Error(errMessage);
       }
-      
+
       toast.success("Payment collected! Booking marked as COMPLETED.");
       fetchPending();
     } catch (err: any) {
