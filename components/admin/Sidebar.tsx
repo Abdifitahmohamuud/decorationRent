@@ -32,8 +32,8 @@ const menuGroups = [
     label: "System",
     items: [
       { icon: Bell,    label: "Notifications", href: "/dashboard/admin/notifications" },
-      { icon: Shield,  label: "Audit Logs",    href: "/dashboard/admin/audit-logs" },
-      { icon: LogIn,   label: "Sessions",      href: "/dashboard/admin/sessions" },
+      // { icon: Shield,  label: "Audit Logs",    href: "/dashboard/admin/audit-logs" },
+      // { icon: LogIn,   label: "Sessions",      href: "/dashboard/admin/sessions" },
     ],
   },
 ];
