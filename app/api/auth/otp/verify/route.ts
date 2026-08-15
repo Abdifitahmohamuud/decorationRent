@@ -31,9 +31,9 @@ export async function POST(req: Request) {
 
     const cookieStore = await cookies();
     cookieStore.set("reg_verified", "true", {
+      secure: false,
+      sameSite: "lax",
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 15, // 15 mins
       path: "/",
     });
 
