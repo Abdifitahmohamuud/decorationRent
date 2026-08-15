@@ -57,22 +57,58 @@ export default function AdminDashboard() {
   const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/dashboard")
-      .then((res) => res.json())
-      .then((data) => {
+    let active = true;
+
+    const loadDashboard = async () => {
+      try {
+        const res = await fetch("/api/admin/dashboard");
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({ error: "Failed to load dashboard" }));
+          throw new Error(errorData.error || `Request failed (${res.status})`);
+        }
+
+        const data = await res.json();
+
+        if (!active) return;
+
         setStats(data.stats);
         setRecentBookings(data.recentBookings);
         setChartData(data.chartData);
-        setLoading(false);
-      });
+        setError(null);
+      } catch (err) {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : "Failed to load dashboard");
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadDashboard();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   if (loading) {
     return (
       <div className="p-12 space-y-8 animate-pulse text-gray-500 text-center">
         Loading analytics...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-12 text-center">
+        <h2 className="text-2xl font-bold text-red-600 mb-2">Dashboard unavailable</h2>
+        <p className="text-gray-600">{error}</p>
       </div>
     );
   }

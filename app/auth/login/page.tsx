@@ -44,8 +44,9 @@ function LoginForm() {
 
       // Update global context & localStorage
       login(data.user, data.token);
-      
-      router.push("/");
+
+      const redirectPath = data.user?.role === "ADMIN" ? "/dashboard/admin" : "/";
+      router.push(redirectPath);
       router.refresh();
     } catch (err: any) {
       setError(err.message || "An error occurred during login");

@@ -1,22 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  DollarSign, 
-  Search, 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  CreditCard, 
-  Smartphone, 
-  CheckCircle2, 
-  Clock, 
+import {
+  DollarSign,
+  Search,
+  ArrowUpRight,
+  ArrowDownRight,
+  CreditCard,
+  Smartphone,
+  CheckCircle2,
+  Clock,
   XCircle,
   FileText,
   Download,
   Calendar,
-  MoreHorizontal,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Layers,
+  RotateCcw,
 } from "lucide-react";
 
 interface Payment {
@@ -27,6 +28,7 @@ interface Payment {
   status: string;
   createdAt: string;
   bookingId: string;
+  phoneNumber?: string | null;
   booking: {
     user: { fullName: string; email: string };
   };
@@ -64,7 +66,7 @@ export default function PaymentTracking() {
 
   const filteredPayments = payments.filter((p) => {
     if (!search) return true;
-    const term = search.toLowerCase();
+    const term = search.toLowerCase().trim();
     return (
       p.id.toLowerCase().includes(term) ||
       p.transactionId.toLowerCase().includes(term) ||
@@ -72,17 +74,26 @@ export default function PaymentTracking() {
       p.status.toLowerCase().includes(term) ||
       p.method.toLowerCase().replace("_", " ").includes(term) ||
       p.bookingId.toLowerCase().includes(term) ||
+      (p.phoneNumber ?? "").toLowerCase().includes(term) ||
       p.booking.user.fullName.toLowerCase().includes(term) ||
+      p.booking.user.email.toLowerCase().includes(term) ||
       new Date(p.createdAt).toLocaleDateString().includes(term)
     );
   });
 
+  // --- Summary stats across ALL loaded transactions (not just the filtered subset) ---
+  const totalCount = payments.length;
+  const successCount = payments.filter((p) => p.status === "SUCCESS").length;
+  const pendingCount = payments.filter((p) => p.status === "PENDING").length;
+  const failedCount = payments.filter((p) => p.status === "FAILED").length;
+  const refundedCount = payments.filter((p) => p.status === "REFUNDED").length;
+
   const totalRevenue = payments
-    .filter(p => p.status === "SUCCESS")
+    .filter((p) => p.status === "SUCCESS")
     .reduce((sum, p) => sum + p.amount, 0);
 
   const pendingRevenue = payments
-    .filter(p => p.status === "PENDING")
+    .filter((p) => p.status === "PENDING")
     .reduce((sum, p) => sum + p.amount, 0);
 
   const toggleExpand = (id: string) => {
@@ -98,17 +109,17 @@ export default function PaymentTracking() {
         </div>
         <div className="flex items-center space-x-3 bg-white p-2 rounded-2xl shadow-sm border border-gray-200">
           <div className="relative">
-             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-             <input 
-               type="text" 
-               placeholder="Transaction ID or Customer..." 
-               className="pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 w-64"
-               value={search}
-               onChange={(e) => setSearch(e.target.value)}
-             />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Search by ID, phone, name, amount..."
+              className="pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 w-72"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
           <div className="h-8 w-px bg-gray-100 mx-2" />
-          <select 
+          <select
             className="bg-gray-50 border-none rounded-xl text-sm font-bold px-4 py-2 text-gray-600 focus:ring-0"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -122,38 +133,72 @@ export default function PaymentTracking() {
         </div>
       </header>
 
-      {/* Financial Stats */}
+      {/* Revenue Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-indigo-600 p-8 rounded-[2rem] shadow-xl text-white">
-           <div className="flex justify-between items-start mb-4">
-             <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-sm">
-                <DollarSign className="w-6 h-6" />
-             </div>
-             <div className="flex items-center space-x-1 px-2 py-1 bg-white/20 rounded-lg text-xs font-bold">
-                <ArrowUpRight className="w-3 h-3" />
-                <span>+14.2%</span>
-             </div>
-           </div>
-           <p className="text-indigo-100 text-xs font-bold uppercase tracking-widest mb-1 opacity-80">Settled Revenue</p>
-           <h3 className="text-3xl font-extrabold">${totalRevenue.toLocaleString()}</h3>
+          <div className="flex justify-between items-start mb-4">
+            <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-sm">
+              <DollarSign className="w-6 h-6" />
+            </div>
+            <div className="flex items-center space-x-1 px-2 py-1 bg-white/20 rounded-lg text-xs font-bold">
+              <ArrowUpRight className="w-3 h-3" />
+              <span>+14.2%</span>
+            </div>
+          </div>
+          <p className="text-indigo-100 text-xs font-bold uppercase tracking-widest mb-1 opacity-80">Settled Revenue</p>
+          <h3 className="text-3xl font-extrabold">${totalRevenue.toLocaleString()}</h3>
         </div>
-        
+
         <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-200">
-           <div className="flex justify-between items-start mb-4">
-             <div className="p-3 bg-amber-50 rounded-2xl text-amber-600">
-                <Clock className="w-6 h-6" />
-             </div>
-           </div>
-           <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-1">Pending Amount</p>
-           <h3 className="text-3xl font-extrabold text-gray-900">${pendingRevenue.toLocaleString()}</h3>
+          <div className="flex justify-between items-start mb-4">
+            <div className="p-3 bg-amber-50 rounded-2xl text-amber-600">
+              <Clock className="w-6 h-6" />
+            </div>
+          </div>
+          <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-1">Pending Amount</p>
+          <h3 className="text-3xl font-extrabold text-gray-900">${pendingRevenue.toLocaleString()}</h3>
         </div>
 
         <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-200 flex flex-col justify-center">
-           <button className="flex items-center justify-center space-x-3 w-full py-4 bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 rounded-2xl transition font-bold text-gray-600">
-             <Download className="w-5 h-5" />
-             <span>Export Financial Report</span>
-           </button>
+          <button className="flex items-center justify-center space-x-3 w-full py-4 bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 rounded-2xl transition font-bold text-gray-600">
+            <Download className="w-5 h-5" />
+            <span>Export Financial Report</span>
+          </button>
         </div>
+      </div>
+
+      {/* Transaction Count Stats - all bookings that actually happened, broken down by status */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <StatCard
+          icon={<Layers className="w-5 h-5" />}
+          label="Total Transactions"
+          value={totalCount}
+          accent="bg-gray-100 text-gray-700"
+        />
+        <StatCard
+          icon={<CheckCircle2 className="w-5 h-5" />}
+          label="Success"
+          value={successCount}
+          accent="bg-emerald-50 text-emerald-600"
+        />
+        <StatCard
+          icon={<Clock className="w-5 h-5" />}
+          label="Pending"
+          value={pendingCount}
+          accent="bg-amber-50 text-amber-600"
+        />
+        <StatCard
+          icon={<XCircle className="w-5 h-5" />}
+          label="Failed"
+          value={failedCount}
+          accent="bg-rose-50 text-rose-600"
+        />
+        <StatCard
+          icon={<RotateCcw className="w-5 h-5" />}
+          label="Refunded"
+          value={refundedCount}
+          accent="bg-blue-50 text-blue-600"
+        />
       </div>
 
       {/* Transactions Table */}
@@ -175,149 +220,180 @@ export default function PaymentTracking() {
                 <tr>
                   <td colSpan={6} className="px-8 py-12 text-center text-gray-500 animate-pulse">Loading transactions...</td>
                 </tr>
-              ) : filteredPayments.map((payment) => (
-                <>
-                  <tr key={payment.id} className="group hover:bg-gray-50/50 transition">
-                    <td className="px-8 py-6">
-                      <div className="flex items-center space-x-3">
-                         <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-500 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition">
-                           <FileText className="w-5 h-5" />
-                         </div>
-                         <div>
-                           <p className="text-sm font-bold text-gray-900 leading-none mb-1">{payment.transactionId}</p>
-                           <div className="flex items-center text-[10px] text-gray-500 font-bold uppercase tracking-widest">
-                             <Calendar className="w-3 h-3 mr-1" />
-                             {new Date(payment.createdAt).toLocaleDateString()}
-                           </div>
-                         </div>
-                      </div>
-                    </td>
-                    <td className="px-8 py-6">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-xs">
-                          {payment.booking.user.fullName[0]}
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-gray-700">{payment.booking.user.fullName}</span>
-                          <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest text-ellipsis overflow-hidden">BK: {payment.bookingId}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-8 py-6">
-                      <span className="font-extrabold text-gray-900">${payment.amount.toLocaleString()}</span>
-                    </td>
-                    <td className="px-8 py-6">
-                      <span className="flex items-center text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1.5 rounded-xl w-max">
-                        {payment.method.startsWith("GLOBAL") ? <CreditCard className="w-4 h-4" /> : <Smartphone className="w-4 h-4" />}
-                        <span className="ml-2">{payment.method.replace("LOCAL_", "").replace("GLOBAL_", "")}</span>
-                      </span>
-                    </td>
-                    <td className="px-8 py-6">
-                      <StatusChip status={payment.status} />
-                    </td>
-                    <td className="px-8 py-6 text-right">
-                      <button 
-                        onClick={() => toggleExpand(payment.id)}
-                        className="text-gray-400 hover:text-indigo-600 transition flex items-center space-x-1 font-bold text-xs"
-                      >
-                        {expandedPaymentId === payment.id ? (
-                          <>
-                            <span>Hide</span>
-                            <ChevronUp className="w-4 h-4" />
-                          </>
-                        ) : (
-                          <>
-                            <span>Details</span>
-                            <ChevronDown className="w-4 h-4" />
-                          </>
-                        )}
-                      </button>
-                    </td>
-                  </tr>
-
-                  {expandedPaymentId === payment.id && (
-                    <tr className="bg-indigo-50/20">
-                      <td colSpan={6} className="px-8 py-6 border-t border-b border-indigo-100/30">
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-extrabold text-xs text-indigo-600 uppercase tracking-widest">Transaction Audit Metadata</h4>
-                            {payment.status === "REFUNDED" && (
-                              <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px] font-bold">REVERSED</span>
-                            )}
+              ) : filteredPayments.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-8 py-12 text-center text-gray-400">No transactions match your search.</td>
+                </tr>
+              ) : (
+                filteredPayments.map((payment) => (
+                  <>
+                    <tr key={payment.id} className="group hover:bg-gray-50/50 transition">
+                      <td className="px-8 py-6">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-500 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition">
+                            <FileText className="w-5 h-5" />
                           </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-2xl border border-gray-100">
-                            {payment.status === "REFUNDED" ? (
-                              <>
-                                <div className="space-y-1">
-                                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Refund Date</span>
-                                  <span className="font-bold text-gray-800 text-sm">
-                                    {payment.refundDate ? new Date(payment.refundDate).toLocaleString() : "N/A"}
-                                  </span>
-                                </div>
-                                <div className="space-y-1">
-                                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Refund Transaction ID</span>
-                                  <span className="font-mono text-gray-800 text-xs font-bold bg-gray-50 px-2 py-1 rounded">
-                                    {payment.refundTransactionId || "N/A"}
-                                  </span>
-                                </div>
-                                <div className="space-y-1 md:col-span-2">
-                                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Refund Reason</span>
-                                  <span className="font-medium text-gray-700 text-sm italic">
-                                    "{payment.refundReason || "No reason provided"}"
-                                  </span>
-                                </div>
-                                <div className="space-y-1">
-                                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Refund Reference ID</span>
-                                  <span className="font-mono text-gray-800 text-xs bg-gray-50 px-2 py-1 rounded">
-                                    {payment.refundReferenceId || "N/A"}
-                                  </span>
-                                </div>
-                                <div className="space-y-1">
-                                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Refund Response Code</span>
-                                  <span className="font-bold text-gray-800 text-sm">
-                                    {payment.refundResponseCode || "N/A"} - {payment.refundResponseMessage || ""}
-                                  </span>
-                                </div>
-                              </>
-                            ) : (
-                              <>
-                                <div className="space-y-1">
-                                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Original Reference ID</span>
-                                  <span className="font-mono text-gray-800 text-xs bg-gray-50 px-2 py-1 rounded">
-                                    {payment.refundReferenceId || payment.id}
-                                  </span>
-                                </div>
-                                <div className="space-y-1">
-                                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Last Refund Attempt</span>
-                                  <span className="font-medium text-gray-800 text-sm">
-                                    {payment.lastRefundAttempt ? new Date(payment.lastRefundAttempt).toLocaleString() : "Never attempted"}
-                                  </span>
-                                </div>
-                                <div className="space-y-1">
-                                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Refund Count</span>
-                                  <span className="font-bold text-gray-800 text-sm">
-                                    {payment.refundCount || 0}
-                                  </span>
-                                </div>
-                                <div className="space-y-1">
-                                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status Status</span>
-                                  <span className="font-semibold text-gray-800 text-sm uppercase">
-                                    {payment.status}
-                                  </span>
-                                </div>
-                              </>
-                            )}
+                          <div>
+                            <p className="text-sm font-bold text-gray-900 leading-none mb-1">{payment.transactionId}</p>
+                            <div className="flex items-center text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                              <Calendar className="w-3 h-3 mr-1" />
+                              {new Date(payment.createdAt).toLocaleDateString()}
+                            </div>
                           </div>
                         </div>
                       </td>
+                      <td className="px-8 py-6">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-xs">
+                            {payment.booking.user.fullName[0]}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-gray-700">{payment.booking.user.fullName}</span>
+                            <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest text-ellipsis overflow-hidden">
+                              {payment.phoneNumber ? payment.phoneNumber : `BK: ${payment.bookingId}`}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-8 py-6">
+                        <span className="font-extrabold text-gray-900">${payment.amount.toLocaleString()}</span>
+                      </td>
+                      <td className="px-8 py-6">
+                        <span className="flex items-center text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1.5 rounded-xl w-max">
+                          {payment.method.startsWith("GLOBAL") ? <CreditCard className="w-4 h-4" /> : <Smartphone className="w-4 h-4" />}
+                          <span className="ml-2">{payment.method.replace("LOCAL_", "").replace("GLOBAL_", "")}</span>
+                        </span>
+                      </td>
+                      <td className="px-8 py-6">
+                        <StatusChip status={payment.status} />
+                      </td>
+                      <td className="px-8 py-6 text-right">
+                        <button
+                          onClick={() => toggleExpand(payment.id)}
+                          className="text-gray-400 hover:text-indigo-600 transition flex items-center space-x-1 font-bold text-xs"
+                        >
+                          {expandedPaymentId === payment.id ? (
+                            <>
+                              <span>Hide</span>
+                              <ChevronUp className="w-4 h-4" />
+                            </>
+                          ) : (
+                            <>
+                              <span>Details</span>
+                              <ChevronDown className="w-4 h-4" />
+                            </>
+                          )}
+                        </button>
+                      </td>
                     </tr>
-                  )}
-                </>
-              ))}
+
+                    {expandedPaymentId === payment.id && (
+                      <tr className="bg-indigo-50/20">
+                        <td colSpan={6} className="px-8 py-6 border-t border-b border-indigo-100/30">
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-extrabold text-xs text-indigo-600 uppercase tracking-widest">Transaction Audit Metadata</h4>
+                              {payment.status === "REFUNDED" && (
+                                <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px] font-bold">REVERSED</span>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-2xl border border-gray-100">
+                              <div className="space-y-1">
+                                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Booking ID</span>
+                                <span className="font-mono text-gray-800 text-xs font-bold bg-gray-50 px-2 py-1 rounded">
+                                  {payment.bookingId}
+                                </span>
+                              </div>
+                              <div className="space-y-1">
+                                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Payer Phone Number</span>
+                                <span className="font-mono text-gray-800 text-xs font-bold bg-gray-50 px-2 py-1 rounded">
+                                  {payment.phoneNumber || "N/A"}
+                                </span>
+                              </div>
+
+                              {payment.status === "REFUNDED" ? (
+                                <>
+                                  <div className="space-y-1">
+                                    <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Refund Date</span>
+                                    <span className="font-bold text-gray-800 text-sm">
+                                      {payment.refundDate ? new Date(payment.refundDate).toLocaleString() : "N/A"}
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Refund Transaction ID</span>
+                                    <span className="font-mono text-gray-800 text-xs font-bold bg-gray-50 px-2 py-1 rounded">
+                                      {payment.refundTransactionId || "N/A"}
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1 md:col-span-2">
+                                    <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Refund Reason</span>
+                                    <span className="font-medium text-gray-700 text-sm italic">
+                                      "{payment.refundReason || "No reason provided"}"
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Refund Reference ID</span>
+                                    <span className="font-mono text-gray-800 text-xs bg-gray-50 px-2 py-1 rounded">
+                                      {payment.refundReferenceId || "N/A"}
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Refund Response Code</span>
+                                    <span className="font-bold text-gray-800 text-sm">
+                                      {payment.refundResponseCode || "N/A"} - {payment.refundResponseMessage || ""}
+                                    </span>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="space-y-1">
+                                    <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Last Refund Attempt</span>
+                                    <span className="font-medium text-gray-800 text-sm">
+                                      {payment.lastRefundAttempt ? new Date(payment.lastRefundAttempt).toLocaleString() : "Never attempted"}
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Refund Count</span>
+                                    <span className="font-bold text-gray-800 text-sm">
+                                      {payment.refundCount || 0}
+                                    </span>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                ))
+              )}
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({
+  icon,
+  label,
+  value,
+  accent,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  accent: string;
+}) {
+  return (
+    <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center gap-4">
+      <div className={`p-2.5 rounded-xl ${accent}`}>{icon}</div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{label}</p>
+        <p className="text-xl font-extrabold text-gray-900">{value}</p>
       </div>
     </div>
   );
@@ -331,7 +407,7 @@ function StatusChip({ status }: { status: string }) {
     REFUNDED: { icon: <ArrowDownRight className="w-3 h-3" />, class: "bg-blue-50 text-blue-600 border-blue-100" },
   };
   const config = configs[status] || configs.PENDING;
-  
+
   return (
     <div className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest border ${config.class}`}>
       {config.icon}

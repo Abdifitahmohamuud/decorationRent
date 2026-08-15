@@ -25,14 +25,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Check localStorage on load (Basic way)
-    const storedUser = localStorage.getItem("auth_user");
-    const storedToken = localStorage.getItem("auth_token");
+    try {
+      const storedUser = localStorage.getItem("auth_user");
+      const storedToken = localStorage.getItem("auth_token");
 
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser));
+      if (storedUser && storedToken) {
+        const parsedUser = JSON.parse(storedUser);
+
+        if (parsedUser?.id && parsedUser?.email && parsedUser?.role) {
+          setUser(parsedUser);
+        } else {
+          localStorage.removeItem("auth_user");
+          localStorage.removeItem("auth_token");
+        }
+      }
+    } catch (error) {
+      console.error("Failed to restore auth session:", error);
+      localStorage.removeItem("auth_user");
+      localStorage.removeItem("auth_token");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = (userData: User, token: string) => {
