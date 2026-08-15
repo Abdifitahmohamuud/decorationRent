@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import {
   X,
   Plus,
+  Minus,
   Trash2,
   Calendar,
   MapPin,
@@ -199,15 +200,18 @@ export function CreateBookingModal({ onClose, onSuccess }: any) {
     return "";
   }, [formData.eventDate, formData.endDate, nowStr]);
 
+  // Same calc as the cart: price per item, scaled by duration blocks, same as /cart page
+  const itemTotal = (item: (typeof formData.items)[number]) => {
+    if (!item.decorationId) return 0;
+    if (durationHours === 0) return item.price * item.quantity;
+    const unit = item.priceUnitHours || 1;
+    const blocks = Math.ceil(durationHours / unit);
+    return item.price * blocks * item.quantity;
+  };
+
   const totalPrice = useMemo(() => {
-    if (durationHours === 0) {
-      return formData.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
-    }
-    return formData.items.reduce((acc, item) => {
-      const unit = item.priceUnitHours || 1;
-      const blocks = Math.ceil(durationHours / unit);
-      return acc + item.price * blocks * item.quantity;
-    }, 0);
+    return formData.items.reduce((acc, item) => acc + itemTotal(item), 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.items, durationHours]);
 
   const depositRequired = Math.round(totalPrice * 0.2 * 100) / 100;
@@ -232,6 +236,7 @@ export function CreateBookingModal({ onClose, onSuccess }: any) {
     setFormData({ ...formData, items: newItems });
   };
 
+  // Same +/- stepper behaviour as the cart page
   const updateQuantity = (index: number, quantity: number) => {
     const newItems = [...formData.items];
     newItems[index] = { ...newItems[index], quantity: Math.max(1, quantity) };
@@ -290,12 +295,13 @@ export function CreateBookingModal({ onClose, onSuccess }: any) {
     setLoading(true);
     setIsPaying(true);
     try {
-      // Step 1: charge the customer's mobile wallet
+      // Step 1: charge the customer's mobile wallet — identical shape to /cart's /api/waafi/purchase call
+      const trimmedPhone = phoneNumber.trim();
       const paymentRes = await fetch("/api/waafi/purchase", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          accountNo: phoneNumber.trim(),
+          accountNo: trimmedPhone,
           amount: Math.round(actualPaymentAmount * 100) / 100,
           currency: "USD",
           referenceId: `ADMIN-${Date.now()}`,
@@ -311,7 +317,9 @@ export function CreateBookingModal({ onClose, onSuccess }: any) {
       }
 
       // Step 2: only create the booking once payment has succeeded
-      const res = await fetch("/api/admin/bookings", {
+      // Uses the same transaction/pricing/availability logic as the
+      // online customer flow (/api/bookings), just targeting a chosen userId.
+      const res = await fetch("/api/admin/manual-bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -319,7 +327,7 @@ export function CreateBookingModal({ onClose, onSuccess }: any) {
           eventDate: formData.eventDate,
           endDate: formData.endDate,
           location: formData.location,
-          phoneNumber: phoneNumber.trim(),
+          phoneNumber: trimmedPhone,
           paymentAmount: actualPaymentAmount,
           paymentMethod,
           transactionId: waafiData.transactionId,
@@ -438,7 +446,7 @@ export function CreateBookingModal({ onClose, onSuccess }: any) {
             </select>
           </div>
 
-          {/* Products - searchable, not a plain dropdown */}
+          {/* Products - same card layout as the /cart page: search + qty stepper + live subtotal */}
           <div className="space-y-4 pt-4 border-t border-gray-200">
             <div className="flex justify-between items-center">
               <label className="text-xs font-extrabold text-gray-500 uppercase tracking-widest ml-1">
@@ -453,9 +461,13 @@ export function CreateBookingModal({ onClose, onSuccess }: any) {
                 <Plus className="w-3 h-3 mr-1" /> Add Product
               </button>
             </div>
+
             {formData.items.map((item, index) => (
-              <div key={index} className="flex space-x-3 items-start">
-                <div className="flex-grow">
+              <div
+                key={index}
+                className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-gray-50 rounded-2xl"
+              >
+                <div className="flex-1 w-full space-y-1">
                   <SearchableSelect
                     placeholder="Search product by name..."
                     displayValue={item.label}
@@ -465,25 +477,47 @@ export function CreateBookingModal({ onClose, onSuccess }: any) {
                     required
                     onSelect={(d) => selectItemDecoration(index, d)}
                   />
+                  {item.decorationId && (
+                    <p className="text-xs text-gray-500 ml-1">
+                      ${item.price} / {(item.priceUnitHours || 1) === 1 ? "hr" : `${item.priceUnitHours} hrs`}
+                    </p>
+                  )}
                 </div>
-                <input
-                  required
-                  type="number"
-                  min="1"
-                  placeholder="Qty"
-                  className="w-24 px-4 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500/20 text-sm font-bold text-center"
-                  value={item.quantity}
-                  onChange={(e) => updateQuantity(index, parseInt(e.target.value) || 1)}
-                />
-                <button
-                  type="button"
-                  onClick={() => removeItem(index)}
-                  className="p-3.5 text-rose-500 hover:bg-rose-50 rounded-2xl"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
+
+                <div className="flex items-center justify-between sm:justify-start gap-4 sm:gap-3">
+                  <div className="flex items-center gap-4 bg-white px-3 py-2 rounded-xl border border-gray-200">
+                    <button
+                      type="button"
+                      onClick={() => updateQuantity(index, item.quantity - 1)}
+                      className="text-gray-500 hover:text-indigo-600 p-1"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <span className="w-8 text-center font-bold text-gray-900">{item.quantity}</span>
+                    <button
+                      type="button"
+                      onClick={() => updateQuantity(index, item.quantity + 1)}
+                      className="text-gray-500 hover:text-indigo-600 p-1"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="font-bold text-gray-900 w-20 text-right">
+                    ${itemTotal(item).toFixed(2)}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => removeItem(index)}
+                    className="text-red-400 hover:text-red-600 p-2"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             ))}
+
             {formData.items.length === 0 && (
               <p className="text-xs text-center text-gray-500">No products added yet. Click Add Product.</p>
             )}
@@ -538,35 +572,33 @@ export function CreateBookingModal({ onClose, onSuccess }: any) {
                 >
                   <optgroup label="Local Mobile Money">
                     <option value="LOCAL_EVC">EVC Plus</option>
-                    <option value="LOCAL_EDAHAB">eDahab</option>
-                    <option value="LOCAL_SAHAL">Sahal</option>
-                    <option value="LOCAL_PREMIER_WALLET">Premier Wallet</option>
-                  </optgroup>
-                  <optgroup label="Global Cards">
-                    <option value="GLOBAL_MASTERCARD">Mastercard</option>
-                    <option value="GLOBAL_PAYPAL">PayPal</option>
                   </optgroup>
                 </select>
               </div>
             </div>
 
-            <div className="bg-indigo-600 rounded-2xl p-5 text-white space-y-2">
-              <div className="flex justify-between text-sm opacity-80">
-                <span>Total Price</span>
+            {/* Summary card - same layout/rows as the /cart page's sticky Booking Summary */}
+            <div className="bg-indigo-600 rounded-2xl p-5 text-white space-y-3">
+              <div className="flex justify-between text-sm pb-3 border-b border-indigo-500/50">
+                <span className="opacity-80">Duration</span>
+                <span className="font-bold">{durationHours > 0 ? `${durationHours.toFixed(1)} hrs` : "---"}</span>
+              </div>
+              <div className="flex justify-between text-sm pb-3 border-b border-indigo-500/50">
+                <span className="opacity-80">Total Price</span>
                 <span className="font-bold">${totalPrice.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="opacity-80">Paying Now</span>
                 <span className="text-lg font-extrabold text-emerald-300">${actualPaymentAmount.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-xs opacity-70 pt-1 border-t border-indigo-500/50">
+              <div className="flex justify-between text-xs opacity-70 pt-2 border-t border-indigo-500/50">
                 <span>Remaining Balance</span>
                 <span>${Math.max(0, totalPrice - actualPaymentAmount).toFixed(2)}</span>
               </div>
             </div>
             <p className="text-[11px] text-gray-400 flex items-center">
               <CheckCircle className="w-3 h-3 mr-1" />
-              {isPaying ? "Processing payment..." : "The booking is only created after payment succeeds."}
+              {isPaying ? "Processing payment..." : "Payment securely processed. The booking is only created after payment succeeds."}
             </p>
           </div>
 
@@ -583,7 +615,7 @@ export function CreateBookingModal({ onClose, onSuccess }: any) {
               disabled={loading || formData.items.length === 0}
               className="flex-[2] py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[1.5rem] font-bold shadow-xl shadow-indigo-100 transition active:scale-[0.98] disabled:opacity-50"
             >
-              {loading ? (isPaying ? "Processing payment..." : "Creating...") : `Pay & Create Booking`}
+              {loading ? (isPaying ? "Processing payment..." : "Creating...") : `Pay $${actualPaymentAmount.toFixed(2)}`}
             </button>
           </div>
         </form>

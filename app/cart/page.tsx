@@ -197,6 +197,8 @@ export default function CartPage() {
           placeholder="Enter mobile number (e.g., 252611111111)"
           value={phoneNumber}
           onChange={(e) => setPhoneNumber(e.target.value)}
+          max={13}
+          min={9}
           className="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
       </div>
