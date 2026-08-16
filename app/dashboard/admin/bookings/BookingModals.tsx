@@ -782,4 +782,5 @@ export function EditBookingModal({ booking, onClose, onSuccess }: any) {
       </div>
     </div>
   );
-}
+  
+}      
