@@ -4,6 +4,35 @@ import { useState, useEffect } from "react";
 import { Package, AlertCircle, CheckCircle, Search, Calendar, User, DollarSign, Edit2, Trash2, X } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 
+// A pickup is only allowed while "today" falls within the booking's
+// event window: on/after eventDate and on/before endDate.
+function getPickupEligibility(eventDate: string, endDate: string): { eligible: boolean; reason?: string } {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const start = new Date(eventDate);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(endDate);
+  end.setHours(0, 0, 0, 0);
+
+  if (today < start) {
+    return {
+      eligible: false,
+      reason: `This booking's event date hasn't arrived yet. Pickup opens on ${start.toLocaleDateString()}.`,
+    };
+  }
+
+  if (today > end) {
+    return {
+      eligible: false,
+      reason: `This booking's rental period ended on ${end.toLocaleDateString()}. Pickup is no longer available.`,
+    };
+  }
+
+  return { eligible: true };
+}
+
 export default function TakenItemsPage() {
   const { user } = useAuth();
   const [items, setItems] = useState<any[]>([]);
@@ -73,14 +102,25 @@ export default function TakenItemsPage() {
   };
 
   const handleRemarkChange = (decorationId: string, value: string) => {
-    setItemRemarks(prev => ({
+    setItemRemarks((prev) => ({
       ...prev,
-      [decorationId]: value
+      [decorationId]: value,
     }));
   };
 
+  // Derived from the loaded booking — recalculated on every render, no extra state needed.
+  const pickupEligibility = booking ? getPickupEligibility(booking.eventDate, booking.endDate) : null;
+
   const handleSubmit = async () => {
     if (!booking) return;
+
+    // Defense in depth: even though the button is disabled outside the
+    // window, block here too in case state is stale.
+    if (pickupEligibility && !pickupEligibility.eligible) {
+      alert(pickupEligibility.reason);
+      return;
+    }
+
     setSubmitting(true);
     try {
       // Process each item in the booking
@@ -99,7 +139,7 @@ export default function TakenItemsPage() {
       });
 
       await Promise.all(promises);
-      
+
       alert("Booking pickup processed successfully!");
       setSearchBookingId("");
       setBooking(null);
@@ -130,16 +170,27 @@ export default function TakenItemsPage() {
     setEditRemarks(item.remarks || "");
   };
 
+  // Clamp so quantity can never be set to zero or negative through the edit form.
+  const handleEditQtyChange = (rawValue: string) => {
+    const parsed = rawValue === "" ? NaN : Number(rawValue);
+    const safeValue = isNaN(parsed) ? 1 : Math.max(1, Math.trunc(parsed));
+    setEditQty(safeValue);
+  };
+
   const handleEditSubmit = async () => {
     if (!editingItem) return;
+    if (!Number.isInteger(editQty) || editQty < 1) {
+      alert("Quantity must be a whole number of at least 1.");
+      return;
+    }
     try {
       const res = await fetch(`/api/taken-items/${editingItem.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           quantity: Number(editQty),
-          remarks: editRemarks
-        })
+          remarks: editRemarks,
+        }),
       });
       if (!res.ok) throw new Error("Failed to update record");
       alert("Pickup record updated successfully!");
@@ -150,7 +201,7 @@ export default function TakenItemsPage() {
     }
   };
 
-  const filteredItems = items.filter(item => {
+  const filteredItems = items.filter((item) => {
     const q = filterQuery.toLowerCase();
     return (
       item.bookingId?.toLowerCase().includes(q) ||
@@ -168,7 +219,12 @@ export default function TakenItemsPage() {
           <p className="text-gray-500">Record, monitor and manage decoration items picked up by customers.</p>
         </div>
         <button
-          onClick={() => { setShowForm(!showForm); setBooking(null); setSearchBookingId(""); setSearchError(""); }}
+          onClick={() => {
+            setShowForm(!showForm);
+            setBooking(null);
+            setSearchBookingId("");
+            setSearchError("");
+          }}
           className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition"
         >
           {showForm ? "Cancel" : "+ Process New Pickup"}
@@ -178,21 +234,21 @@ export default function TakenItemsPage() {
       {showForm && (
         <div className="bg-white p-6 rounded-xl border mb-8 shadow-sm">
           <h2 className="text-lg font-bold mb-4">Process Pickup</h2>
-          
+
           <div className="flex gap-4 mb-6">
             <div className="flex-1 relative">
               <Search className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
-              <input 
-                type="text" 
-                value={searchBookingId} 
-                onChange={e => setSearchBookingId(e.target.value)} 
-                onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                className="w-full border rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500" 
-                placeholder="Enter Booking ID to search..." 
+              <input
+                type="text"
+                value={searchBookingId}
+                onChange={(e) => setSearchBookingId(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                className="w-full border rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
+                placeholder="Enter Booking ID to search..."
               />
             </div>
-            <button 
-              onClick={handleSearch} 
+            <button
+              onClick={handleSearch}
               disabled={searching}
               className="px-6 py-2 bg-gray-900 text-white rounded-lg font-bold text-sm disabled:opacity-50"
             >
@@ -212,15 +268,32 @@ export default function TakenItemsPage() {
               <div className="bg-gray-50 p-6 grid grid-cols-1 md:grid-cols-2 gap-6 border-b">
                 <div>
                   <h3 className="text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-3">Customer Details</h3>
-                  <p className="font-bold text-gray-900 flex items-center gap-2 mb-1"><User className="w-4 h-4 text-gray-400" /> {booking.user?.fullName}</p>
-                  <p className="text-sm text-gray-600">{booking.user?.email} • {booking.user?.phone}</p>
+                  <p className="font-bold text-gray-900 flex items-center gap-2 mb-1">
+                    <User className="w-4 h-4 text-gray-400" /> {booking.user?.fullName}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {booking.user?.email} • {booking.user?.phone}
+                  </p>
                 </div>
                 <div>
                   <h3 className="text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-3">Booking Details</h3>
-                  <p className="font-bold text-gray-900 flex items-center gap-2 mb-1"><Calendar className="w-4 h-4 text-gray-400" /> {new Date(booking.eventDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}</p>
-                  <p className="text-sm text-gray-600 font-bold flex items-center gap-2"><DollarSign className="w-4 h-4 text-gray-400" /> Total: ${booking.totalPrice} (Paid: ${booking.totalPrice - booking.balance})</p>
+                  <p className="font-bold text-gray-900 flex items-center gap-2 mb-1">
+                    <Calendar className="w-4 h-4 text-gray-400" /> {new Date(booking.eventDate).toLocaleDateString()} -{" "}
+                    {new Date(booking.endDate).toLocaleDateString()}
+                  </p>
+                  <p className="text-sm text-gray-600 font-bold flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-gray-400" /> Total: ${booking.totalPrice} (Paid: ${booking.totalPrice - booking.balance})
+                  </p>
                 </div>
               </div>
+
+              {/* Pickup window warning */}
+              {pickupEligibility && !pickupEligibility.eligible && (
+                <div className="mx-6 mt-6 p-4 bg-amber-50 border border-amber-100 text-amber-700 rounded-xl text-sm font-bold flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                  {pickupEligibility.reason}
+                </div>
+              )}
 
               {/* Items to Take */}
               <div className="p-6">
@@ -237,8 +310,8 @@ export default function TakenItemsPage() {
                       </div>
                       <div className="w-72">
                         <label className="text-[10px] uppercase tracking-widest text-gray-500 font-bold block mb-1">Defect Notes / Remarks (Optional)</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           placeholder="e.g. Scratched but okay, missing a screw..."
                           value={itemRemarks[item.decorationId] || ""}
                           onChange={(e) => handleRemarkChange(item.decorationId, e.target.value)}
@@ -250,10 +323,11 @@ export default function TakenItemsPage() {
                 </div>
 
                 <div className="mt-8 flex justify-end">
-                  <button 
-                    onClick={handleSubmit} 
-                    disabled={submitting}
-                    className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold disabled:opacity-50 hover:bg-indigo-700 transition shadow-lg shadow-indigo-100"
+                  <button
+                    onClick={handleSubmit}
+                    disabled={submitting || (pickupEligibility ? !pickupEligibility.eligible : false)}
+                    title={pickupEligibility && !pickupEligibility.eligible ? pickupEligibility.reason : undefined}
+                    className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-700 transition shadow-lg shadow-indigo-100"
                   >
                     {submitting ? "Processing..." : "Complete Pickup"}
                   </button>
@@ -267,10 +341,10 @@ export default function TakenItemsPage() {
       {/* Global Filter Bar */}
       <div className="bg-white p-4 rounded-xl border mb-6 shadow-sm flex items-center relative">
         <Search className="w-5 h-5 absolute left-7 text-gray-400" />
-        <input 
+        <input
           type="text"
           value={filterQuery}
-          onChange={e => setFilterQuery(e.target.value)}
+          onChange={(e) => setFilterQuery(e.target.value)}
           className="w-full border bg-gray-50 rounded-lg pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
           placeholder="Search pickups by booking ID, decoration name, remarks, customer name..."
         />
@@ -318,18 +392,18 @@ export default function TakenItemsPage() {
                     <td className="px-6 py-4 text-amber-600 font-semibold italic text-xs">
                       {item.remarks || "None (Perfect Condition)"}
                     </td>
-                    <td className="px-6 py-4 text-gray-600">{item.user?.fullName || 'System'}</td>
+                    <td className="px-6 py-4 text-gray-600">{item.user?.fullName || "System"}</td>
                     <td className="px-6 py-4 text-gray-500">{new Date(item.takenAt).toLocaleDateString()}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <button 
+                        <button
                           onClick={() => startEdit(item)}
                           className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
                           title="Edit record"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDelete(item.id)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
                           title="Delete record"
@@ -352,10 +426,7 @@ export default function TakenItemsPage() {
           <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="flex justify-between items-center bg-gray-50 px-6 py-4 border-b">
               <h3 className="font-bold text-gray-900">Edit Pickup Record</h3>
-              <button 
-                onClick={() => setEditingItem(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
+              <button onClick={() => setEditingItem(null)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -367,34 +438,38 @@ export default function TakenItemsPage() {
 
               <div>
                 <label className="text-xs font-extrabold text-gray-400 uppercase tracking-widest block mb-2">Quantity</label>
-                <input 
+                <input
                   type="number"
+                  step="1"
+                  min="1"
+                  inputMode="numeric"
+                  onKeyDown={(e) => (e.key === "-" || e.key === "e" || e.key === ".") && e.preventDefault()}
                   value={editQty}
-                  onChange={e => setEditQty(Number(e.target.value))}
+                  onChange={(e) => handleEditQtyChange(e.target.value)}
                   className="w-full border rounded-lg p-2.5 text-sm"
-                  min={1}
                 />
+                <p className="text-[10px] text-gray-400 mt-1">Minimum 1</p>
               </div>
 
               <div>
                 <label className="text-xs font-extrabold text-gray-400 uppercase tracking-widest block mb-2">Defect Notes / Remarks</label>
-                <input 
+                <input
                   type="text"
                   value={editRemarks}
-                  onChange={e => setEditRemarks(e.target.value)}
+                  onChange={(e) => setEditRemarks(e.target.value)}
                   className="w-full border rounded-lg p-2.5 text-sm"
                   placeholder="E.g. scratched, missing part..."
                 />
               </div>
             </div>
             <div className="bg-gray-50 px-6 py-4 border-t flex justify-end gap-3">
-              <button 
+              <button
                 onClick={() => setEditingItem(null)}
                 className="px-4 py-2 border rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleEditSubmit}
                 className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition"
               >
