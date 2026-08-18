@@ -170,14 +170,10 @@ export default function AdminCheckoutPage() {
                   >
                     <optgroup label="Local Methods">
                       <option value="LOCAL_EVC">EVC Plus</option>
-                      <option value="LOCAL_EDAHAB">eDahab</option>
-                      <option value="LOCAL_SAHAL">Sahal</option>
-                      <option value="LOCAL_PREMIER_WALLET">Premier Wallet</option>
+                      
+                    
                     </optgroup>
-                    <optgroup label="Global Methods">
-                      <option value="GLOBAL_MASTERCARD">Mastercard</option>
-                      <option value="GLOBAL_PAYPAL">PayPal</option>
-                    </optgroup>
+                 
                   </select>
                 </div>
 
